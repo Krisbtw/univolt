@@ -1,0 +1,72 @@
+@import "tailwindcss";
+@import "@fontsource-variable/figtree";
+@import "@fontsource-variable/fraunces";
+
+@theme {
+  --font-sans: "Figtree Variable", "Figtree", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces Variable", "Fraunces", ui-serif, Georgia, serif;
+
+  --color-bg: #efe8dc;
+  --color-surface: #f7f2e9;
+  --color-paper: #fffdf8;
+  --color-ink: #1a1612;
+  --color-muted: #6e665c;
+  --color-faint: #9a9286;
+  --color-line: #ddd4c6;
+  --color-pine: #145c4c;
+  --color-pine-fg: #f3f7f4;
+  --color-moss: #3d7a64;
+  --color-monitor: #10221c;
+  --color-monitor-grid: #1b3a31;
+  --color-trace: #9ee0c2;
+  --color-warn: #8a4b24;
+  --color-danger: #8a3030;
+  --color-ok: #2c6b52;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+}
+
+@layer base {
+  html {
+    background: var(--color-bg);
+    color: var(--color-ink);
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background: var(--color-bg);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01" on, "cv11" on;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  #app {
+    min-height: 100dvh;
+  }
+
+  input,
+  textarea,
+  select {
+    font-family: inherit;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

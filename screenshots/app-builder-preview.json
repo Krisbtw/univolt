@@ -1,0 +1,36 @@
+{
+  "url": "http://127.0.0.1:8080/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Univolt",
+      "hasCanvas": false,
+      "bodyTextLen": 349,
+      "bodyTextHash": "1fb4136c325419f3d2a17c520fa854abd09c69c14d3b17e14a0d4f7d84dbf056",
+      "bodyTextPrefix": "Univolt FIELD VITALS KIT Offline · on device Field roster Regist",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Univolt",
+      "hasCanvas": false,
+      "bodyTextLen": 349,
+      "bodyTextHash": "1fb4136c325419f3d2a17c520fa854abd09c69c14d3b17e14a0d4f7d84dbf056",
+      "bodyTextPrefix": "Univolt FIELD VITALS KIT Offline · on device Field roster Regist",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-preview.json"
+}

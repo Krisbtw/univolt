@@ -6,45 +6,45 @@ export interface BranchStrings {
     title: string;
     body: string;
 }
-
 export interface GuidanceStrings {
     urgentPrefix: string;
     referralLine: string;
     triage: Record<TriageLevel, BranchStrings>;
 }
-
 export interface Strings {
     appTitle: string;
     tagline: string;
     liveBadge: string;
-    simulatedBadge: string;
-    demoModeNotice: string;
-    demoWatermark: string;
     metricHeartRate: string;
     metricHeartRateUnit: string;
     metricHrv: string;
     metricHrvUnit: string;
-    metricSpo2: string;
-    metricSpo2Unit: string;
-    metricSpo2Note: string;
     metricRespRate: string;
     metricRespRateUnit: string;
     metricRespRateNote: string;
+    qualityLabel: string;
+    qualityGood: string;
+    qualityWeak: string;
     placeholder: string;
     secUnit: string;
     separator: string;
-    contactOverlay: string;
-    readyHint: string;
-    scanningLabel: string;
-    pausedLabel: string;
-    demoButton: string;
+    faceGuide: string;
+    statusLoadingModel: string;
+    statusModelFallback: string;
+    statusNoFace: string;
+    statusMotion: string;
+    statusLowLight: string;
+    statusWeakSignal: string;
+    measuringLabel: string;
+    scanComplete: string;
+    unableToDetect: string;
+    unableToDetectBody: string;
     newScanButton: string;
     grantPermissionButton: string;
     permissionDeniedTitle: string;
     permissionDeniedBody: string;
     permissionUnsupportedTitle: string;
     permissionUnsupportedBody: string;
-    scanComplete: string;
     guidanceTitle: string;
     guidanceIntro: string;
     languageLabel: string;
@@ -59,38 +59,41 @@ export interface Strings {
 
 const en: Strings = {
     appTitle: "UniVolt Vitals",
-    tagline: "Camera-based vital signs scan",
+    tagline: "Camera-based heart-rate scan (face rPPG)",
     liveBadge: "LIVE",
-    simulatedBadge: "SIMULATED",
-    demoModeNotice: "Demo simulation — synthetic PPG, not real measurements",
-    demoWatermark: "SIMULATED — demo data, not real measurements",
     metricHeartRate: "Heart Rate",
     metricHeartRateUnit: "bpm",
     metricHrv: "HRV (SDNN)",
     metricHrvUnit: "ms",
-    metricSpo2: "SpO₂",
-    metricSpo2Unit: "%",
-    metricSpo2Note: "estimate",
     metricRespRate: "Respiratory Rate",
     metricRespRateUnit: "/min",
     metricRespRateNote: "approx",
+    qualityLabel: "Signal quality",
+    qualityGood: "Good",
+    qualityWeak: "Weak",
     placeholder: "--",
     secUnit: "s",
     separator: " · ",
-    contactOverlay: "No finger detected — place finger firmly over camera lens",
-    readyHint: "Place your fingertip firmly over the camera lens to begin the scan.",
-    scanningLabel: "Scanning",
-    pausedLabel: "Paused — waiting for finger contact",
-    demoButton: "Run 12s Demo Simulation (For Laptop Judges)",
+    faceGuide: "Center your face in the oval",
+    statusLoadingModel: "Loading face detector…",
+    statusModelFallback: "Face detector unavailable — using skin-tone fallback",
+    statusNoFace: "No face detected",
+    statusMotion: "Too much movement — hold still",
+    statusLowLight: "Lighting too dim",
+    statusWeakSignal: "Weak pulse signal",
+    measuringLabel: "Measuring",
+    scanComplete: "Scan complete",
+    unableToDetect: "Unable to detect",
+    unableToDetectBody:
+        "The signal was too noisy to measure a heart rate. Sit still, face a steady light source, and try again for the full 25 seconds.",
     newScanButton: "New Scan",
     grantPermissionButton: "Grant permission",
     permissionDeniedTitle: "Camera access is blocked",
     permissionDeniedBody:
-        "UniVolt needs the camera to read the pulse from your fingertip. Grant access below — or run the 12-second demo simulation to see the full pipeline.",
+        "UniVolt needs the front camera to measure your heart rate from your face. Grant access below to continue.",
     permissionUnsupportedTitle: "Camera not available",
     permissionUnsupportedBody:
-        "This browser does not expose a camera. You can still run the demo simulation to see the full pipeline.",
-    scanComplete: "Scan complete",
+        "This browser does not expose a camera, so the face scan cannot run.",
     guidanceTitle: "Awareness & Triage Guidance",
     guidanceIntro: "Read this aloud to the person you scanned:",
     languageLabel: "Language",
@@ -108,7 +111,7 @@ const en: Strings = {
         triage: {
             normal: {
                 title: "All vitals normal",
-                body: "Heart rate, oxygen and breathing are all in the normal range. Encourage the person to drink water and rest for a few minutes.",
+                body: "Heart rate and breathing are in the normal range. Encourage the person to drink water and rest for a few minutes.",
             },
             borderline: {
                 title: "Values at the edge of normal",
@@ -132,7 +135,7 @@ const en: Strings = {
             },
             inconclusive: {
                 title: "Not enough signal",
-                body: "The scan could not produce reliable values. Wipe the lens, place the finger firmly over the camera, and run the scan again.",
+                body: "The scan could not produce a reliable reading. Move to brighter, steadier lighting, hold your face still, and run the scan again.",
             },
         },
     },
@@ -140,38 +143,41 @@ const en: Strings = {
 
 const hi: Strings = {
     appTitle: "यूनिवोल्ट वाइटल्स",
-    tagline: "कैमरे से जीवन-संकेतों की जाँच",
+    tagline: "कैमरे से चेहरे की नाड़ी जाँच (rPPG)",
     liveBadge: "लाइव",
-    simulatedBadge: "सिम्युलेटेड",
-    demoModeNotice: "डेमो सिमुलेशन — संश्लेषित सिग्नल, वास्तविक मापन नहीं",
-    demoWatermark: "सिम्युलेटेड — डेमो डेटा, वास्तविक माप नहीं",
     metricHeartRate: "हृदय गति",
     metricHeartRateUnit: "बीपीएम",
     metricHrv: "एचआरवी (SDNN)",
     metricHrvUnit: "मि.से.",
-    metricSpo2: "SpO₂",
-    metricSpo2Unit: "%",
-    metricSpo2Note: "अनुमान",
     metricRespRate: "श्वसन दर",
     metricRespRateUnit: "/मिनट",
     metricRespRateNote: "लगभग",
+    qualityLabel: "सिग्नल गुणवत्ता",
+    qualityGood: "अच्छी",
+    qualityWeak: "कमज़ोर",
     placeholder: "--",
     secUnit: "सेकंड",
     separator: " · ",
-    contactOverlay: "उंगली का पता नहीं चला — कृपया उंगली को कैमरे के लेंस पर दृढ़ता से रखें",
-    readyHint: "स्कैन शुरू करने के लिए अपनी उंगली को कैमरे के लेंस पर दृढ़ता से रखें।",
-    scanningLabel: "स्कैन हो रहा है",
-    pausedLabel: "रुका हुआ — उंगली के संपर्क की प्रतीक्षा",
-    demoButton: "12 सेकंड का डेमो सिमुलेशन चलाएँ (लैपटॉप पर जजों के लिए)",
+    faceGuide: "अपना चेहरा अंडाकार के केंद्र में रखें",
+    statusLoadingModel: "फेस डिटेक्टर लोड हो रहा है…",
+    statusModelFallback: "फेस डिटेक्टर उपलब्ध नहीं — स्किन-टोन फ़ॉलबैक उपयोग में",
+    statusNoFace: "चेहरा नहीं मिला",
+    statusMotion: "बहुत हलचल — स्थिर रहें",
+    statusLowLight: "रोशनी कम है",
+    statusWeakSignal: "नाड़ी सिग्नल कमज़ोर",
+    measuringLabel: "माप जारी",
+    scanComplete: "स्कैन पूर्ण",
+    unableToDetect: "पता लगाने में असमर्थ",
+    unableToDetectBody:
+        "हृदय गति मापने के लिए सिग्नल बहुत शोर में था। स्थिर रोशनी में बैठें, पूरे 25 सेकंड स्थिर रहें, और दोबारा प्रयास करें।",
     newScanButton: "नया स्कैन",
     grantPermissionButton: "अनुमति दें",
     permissionDeniedTitle: "कैमरे की पहुँच रुकी हुई है",
     permissionDeniedBody:
-        "यूनिवोल्ट को उंगली से नाड़ी पढ़ने के लिए कैमरे की आवश्यकता है। नीचे अनुमति दें — या पूरी प्रक्रिया देखने के लिए 12 सेकंड का डेमो सिमुलेशन चलाएँ।",
+        "यूनिवोल्ट को आपकी हृदय गति चेहरे से मापने के लिए फ्रंट कैमरे की आवश्यकता है। जारी रखने के लिए नीचे अनुमति दें।",
     permissionUnsupportedTitle: "कैमरा उपलब्ध नहीं",
     permissionUnsupportedBody:
-        "इस ब्राउज़र में कैमरा उपलब्ध नहीं है। पूरी प्रक्रिया देखने के लिए आप डेमो सिमुलेशन चला सकते हैं।",
-    scanComplete: "स्कैन पूर्ण",
+        "इस ब्राउज़र में कैमरा नहीं मिलता, इसलिए फेस स्कैन नहीं चल सकता।",
     guidanceTitle: "जागरूकता एवं ट्राइज मार्गदर्शन",
     guidanceIntro: "जाँच के बाद यह सलाह मरीज़ को सुनाएँ:",
     languageLabel: "भाषा",
@@ -184,11 +190,12 @@ const hi: Strings = {
         "यह चिकित्सा उपकरण नहीं है। केवल जाँच और शिक्षा के लिए। आपातकाल में नज़दीकी स्वास्थ्य केंद्र जाएँ।",
     guidance: {
         urgentPrefix: "तत्काल — ",
-        referralLine: "कृपया शीघ्र-से-शीघ्र नज़दीकी प्राथमिक स्वास्थ्य केंद्र (PHC) पर जाएँ।",
+        referralLine:
+            "कृपया शीघ्र-से-शीघ्र नज़दीकी प्राथमिक स्वास्थ्य केंद्र (PHC) पर जाएँ।",
         triage: {
             normal: {
                 title: "सभी माप सामान्य",
-                body: "हृदय गति, ऑक्सीजन और श्वसन — तीनों माप सामान्य सीमा में हैं। मरीज़ को पानी पिलाने और कुछ देर आराम करने की सलाह दें।",
+                body: "हृदय गति और श्वसन — दोनों माप सामान्य सीमा में हैं। मरीज़ को पानी पिलाने और कुछ देर आराम करने की सलाह दें।",
             },
             borderline: {
                 title: "माप सामान्य सीमा के किनारे",
@@ -204,22 +211,22 @@ const hi: Strings = {
             },
             hypoxia: {
                 title: "ऑक्सीजन कम (संभावित हाइपोक्सिया)",
-                body: "रक्त में ऑक्सीजन सामान्य से कम प्रतीत हो रही है। मरीज़ को बैठकर आराम दें और दोबारा जाँचें। स्तर 90 से कम हो तो तत्काल उपचार चाहिए।",
+                body: "खून में ऑक्सीजन का स्तर सामान्य से कम जान पड़ता है। मरीज़ को सीधा बैठाएँ, शांत रखें, और दोबारा जाँचें। 90% से कम होने पर तत्काल देखभाल चाहिए।",
             },
             tachypnea: {
-                title: "साँस तेज़ (टैकीपनिया)",
-                body: "श्वसन दर सामान्य से तेज़ है। मरीज़ को बैठने दें और पाँच मिनट बाद साँस फिर गिनें। अब भी तेज़ हो तो भेजें।",
+                title: "श्वसन तेज़ (टैकिप्निया)",
+                body: "साँस की दर सामान्य से तेज़ है। मरीज़ को बैठकर आराम कराएँ और पाँच मिनट बाद दोबारा गिनें। अगर तेज़ बनी रहे तो भेजें।",
             },
             inconclusive: {
-                title: "संकेत अपर्याप्त",
-                body: "इस स्कैन से भरोसेमंद माप नहीं मिले। लेंस साफ़ करें, उंगली को दृढ़ता से लेंस पर रखें और दोबारा स्कैन करें।",
+                title: "पर्याप्त सिग्नल नहीं",
+                body: "स्कैन से भरोसेमंद मान नहीं मिले। बेहतर, स्थिर रोशनी में जाएँ, चेहरा स्थिर रखें, और स्कैन दोबारा चलाएँ।",
             },
         },
     },
 };
 
-export const translations: Record<Locale, Strings> = { en, hi };
+const STRINGS: Record<Locale, Strings> = { en, hi };
 
 export function getStrings(locale: Locale): Strings {
-    return translations[locale];
+    return STRINGS[locale] ?? STRINGS.en;
 }

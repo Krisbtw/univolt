@@ -1,4 +1,4 @@
-import type { VitalsMetrics } from "./signalProcessing";
+import type { VitalsMetrics } from "./rppgEngine";
 
 export type TriageLevel =
     | "normal"
@@ -9,7 +9,7 @@ export type TriageLevel =
     | "tachypnea"
     | "inconclusive";
 
-// Deterministic thresholds (rubric Task 3).
+// Deterministic thresholds.
 export const HR_MIN_NORMAL = 60;
 export const HR_MAX_NORMAL = 100;
 export const HR_TACHY_URGENT = 120;
@@ -29,8 +29,8 @@ export interface TriageResult {
 
 /**
  * Priority: hypoxia > bradycardia > tachypnea > tachycardia > borderline > normal.
- * "borderline" covers the gap zones (HR 50–59, SpO2 94, RR 21–24, or missing
- * but non-abnormal values) with a rest-and-recheck message.
+ * Null metrics are "not measured" (face rPPG never reports SpO₂), so a scan
+ * with normal HR + RR and no SpO₂ is "normal", not "borderline".
  */
 export function evaluateTriage(m: VitalsMetrics): TriageResult {
     const { bpm, spo2, rr } = m;
@@ -53,9 +53,6 @@ export function evaluateTriage(m: VitalsMetrics): TriageResult {
     const spo2Ok = spo2 === null || spo2 >= SPO2_MIN_NORMAL;
     const rrOk = rr === null || (rr >= RR_MIN_NORMAL && rr <= RR_MAX_NORMAL);
     if (hrOk && spo2Ok && rrOk) {
-        if (bpm === null || spo2 === null || rr === null) {
-            return { level: "borderline", referral: false, urgent: false };
-        }
         return { level: "normal", referral: false, urgent: false };
     }
     return { level: "borderline", referral: false, urgent: false };

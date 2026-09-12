@@ -3,7 +3,11 @@ import type { PpgResult } from "./types";
 export const PPG_SAMPLE_RATE = 50;
 export const PPG_DURATION_SEC = 12;
 
-/** Morphologically plausible fingertip PPG pulse (systolic peak + dicrotic notch). */
+/**
+ * Morphologically plausible fingertip PPG pulse (systolic peak + dicrotic notch).
+ * Used exclusively by the demo signal generator — the DSP pipeline suppresses
+ * the dicrotic notch via the raised adaptive threshold.
+ */
 function pulseShape(phase: number): number {
   const p = ((phase % 1) + 1) % 1;
   const systolic = Math.exp(-((p - 0.16) ** 2) / (2 * 0.045 ** 2));
@@ -19,8 +23,9 @@ export type SimulatedPpg = {
 };
 
 /**
- * Simulated red-channel intensity for web / no-flash environments.
+ * Simulated green-channel fingertip PPG for web / no-flash environments.
  * Produces a noisy PPG at a randomized 65–95 BPM with respiratory modulation.
+ * (Green channel is now the cardiac input; red is used only for the contact gate.)
  */
 export function generateSimulatedPpg(
   durationSec = PPG_DURATION_SEC,
@@ -47,6 +52,8 @@ export function generateSimulatedPpg(
   return { samples, bpm, rrBpm, sampleRate };
 }
 
+// ── Utility statistics ────────────────────────────────────────────────────────
+
 function mean(xs: number[]): number {
   if (xs.length === 0) return 0;
   let s = 0;
@@ -60,6 +67,16 @@ function stdev(xs: number[]): number {
   let s = 0;
   for (const x of xs) s += (x - m) ** 2;
   return Math.sqrt(s / (xs.length - 1));
+}
+
+/** Returns the median of an unsorted array without mutating it. */
+function median(xs: number[]): number {
+  if (xs.length === 0) return 0;
+  const sorted = xs.slice().sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? (sorted[mid - 1]! + sorted[mid]!) / 2
+    : sorted[mid]!;
 }
 
 function movingAverage(xs: number[], window: number): number[] {
@@ -84,48 +101,88 @@ function bandpass(xs: number[], sampleRate: number, lowHz: number, highHz: numbe
   return movingAverage(detrended, fastN);
 }
 
+// ── IBI outlier rejection ─────────────────────────────────────────────────────
+
+/**
+ * Discard any inter-beat interval that deviates more than 20 % from the
+ * median IBI. This rejects premature ectopic beats and motion artifacts.
+ * Returns the trimmed mean of the surviving IBIs (in ms).
+ */
+function trimmedMeanIbi(ibis: number[]): number {
+  if (ibis.length === 0) return 0;
+  const med = median(ibis);
+  const filtered = ibis.filter((ibi) => Math.abs(ibi - med) / med <= 0.20);
+  if (filtered.length === 0) return med; // fallback: use median if all rejected
+  return mean(filtered);
+}
+
+// ── Peak detection ────────────────────────────────────────────────────────────
+
+/**
+ * Detects systolic peaks in a bandpassed PPG signal.
+ *
+ * Key parameters (per DSP spec):
+ *  - Refractory / blanking window: **380 ms** (≤158 BPM cap) — suppresses
+ *    the dicrotic notch that caused 10–12 BPM overcounting.
+ *  - Adaptive threshold: Mean + **0.45 × SD** — triggers exclusively on
+ *    the prominent systolic peak, not the smaller reflected notch.
+ */
 export function detectPeaks(
   signal: number[],
   sampleRate: number,
-  minBpm = 45,
-  maxBpm = 160,
+  minBpm = 40,
+  maxBpm = 158, // hard ceiling enforced by 380 ms blanking
 ): number[] {
   if (signal.length < 5) return [];
-  const minDist = Math.max(2, Math.floor((sampleRate * 60) / maxBpm));
+
+  // Blanking window: 380 ms — any peak within this window of a prior peak is
+  // discarded, preventing double-counting of the dicrotic notch.
+  const blankingSamples = Math.max(2, Math.round((380 / 1000) * sampleRate));
+
+  // Physiological IBI bounds
+  const minIbi = (60 / maxBpm) * sampleRate; // same as blanking for 158 BPM
+  const maxIbi = (60 / minBpm) * sampleRate;
+
   const m = mean(signal);
   const sd = stdev(signal) || 1;
-  const thresh = m + 0.28 * sd;
-  const peaks: number[] = [];
+  // Raised threshold (0.45 × SD) ensures only the dominant systolic peak triggers.
+  const thresh = m + 0.45 * sd;
+
+  // Pass 1: local maxima above threshold with 2-sample neighbourhood check.
+  const candidates: number[] = [];
   for (let i = 2; i < signal.length - 2; i++) {
     const y = signal[i]!;
     if (y < thresh) continue;
-    if (y >= signal[i - 1]! && y >= signal[i + 1]! && y >= signal[i - 2]! && y >= signal[i + 2]!) {
-      const last = peaks[peaks.length - 1];
-      if (last != null && i - last < minDist) {
-        if (y > signal[last]!) peaks[peaks.length - 1] = i;
+    if (
+      y >= signal[i - 1]! &&
+      y >= signal[i + 1]! &&
+      y >= signal[i - 2]! &&
+      y >= signal[i + 2]!
+    ) {
+      const last = candidates[candidates.length - 1];
+      // Within blanking window: keep only the taller peak.
+      if (last != null && i - last < blankingSamples) {
+        if (y > signal[last]!) candidates[candidates.length - 1] = i;
         continue;
       }
-      peaks.push(i);
+      candidates.push(i);
     }
   }
-  const minIbi = (60 / maxBpm) * sampleRate;
-  const maxIbi = (60 / minBpm) * sampleRate;
-  const filtered: number[] = [];
-  for (const p of peaks) {
-    const prev = filtered[filtered.length - 1];
+
+  // Pass 2: enforce physiological IBI limits (reject implausible intervals).
+  const peaks: number[] = [];
+  for (const p of candidates) {
+    const prev = peaks[peaks.length - 1];
     if (prev == null) {
-      filtered.push(p);
+      peaks.push(p);
       continue;
     }
     const ibi = p - prev;
-    if (ibi < minIbi) continue;
-    if (ibi > maxIbi * 1.6 && filtered.length > 1) {
-      filtered.push(p);
-      continue;
-    }
-    filtered.push(p);
+    if (ibi < minIbi) continue; // too fast — likely noise / dicrotic notch residue
+    peaks.push(p);
   }
-  return filtered;
+
+  return peaks;
 }
 
 function ibiMs(peaks: number[], sampleRate: number): number[] {
@@ -208,20 +265,24 @@ function estimateRespiratoryRate(
 }
 
 /**
- * Estimated SpO2 from a single RGB / red-channel PPG.
- * True SpO2 needs red + infrared; this is a perfusion-index heuristic only.
+ * Estimated SpO2 from a single-channel PPG (green or red).
+ * True SpO2 requires red + infrared; this is a perfusion-index heuristic only.
  */
 function estimateSpo2(samples: number[]): number {
   const dc = mean(samples);
   const ac = stdev(samples);
   const pi = dc > 0 ? ac / dc : 0;
-  // Higher perfusion index → slightly higher screening estimate; clamp to 94–99.
   const raw = 94.2 + Math.min(pi, 0.22) * 22;
   const jitter = (mean(samples.slice(0, 8).map((x) => x % 0.01)) - 0.005) * 8;
   return Math.round(Math.min(99, Math.max(94, raw + jitter)));
 }
 
-function signalQuality(samples: number[], ibis: number[], peaks: number[], durationSec: number): number {
+function signalQualityScore(
+  samples: number[],
+  ibis: number[],
+  peaks: number[],
+  durationSec: number,
+): number {
   if (peaks.length < 4 || ibis.length < 3) return 38;
   const cv = stdev(ibis) / (mean(ibis) || 1);
   const regularity = Math.max(0, 1 - cv / 0.28);
@@ -233,21 +294,44 @@ function signalQuality(samples: number[], ibis: number[], peaks: number[], durat
   return Math.round(Math.min(97, Math.max(42, score)));
 }
 
-/** Run the same peak-detection pipeline used for live camera samples. */
+// ── Main DSP pipeline ─────────────────────────────────────────────────────────
+
+/**
+ * Run the full PPG processing pipeline on a green-channel (or simulated) sample
+ * array.
+ *
+ * Changes vs. previous version:
+ *  - Peak detection: blanking 380 ms, threshold Mean + 0.45 SD
+ *  - BPM: computed from trimmed-mean IBI after ±20 % outlier rejection
+ *  - RMSSD: computed on raw (unfiltered) IBIs for physiological accuracy
+ */
 export function processPpg(samples: number[], sampleRate = PPG_SAMPLE_RATE): PpgResult {
   const durationSec = samples.length / sampleRate;
+
+  // Detrend: subtract slow moving average (high-pass effect).
   const dc = movingAverage(samples, Math.round(sampleRate * 0.9));
   const ac = samples.map((x, i) => x - dc[i]!);
+
+  // Smooth (low-pass) and ensure positive polarity.
   const smooth = movingAverage(ac, Math.max(2, Math.round(sampleRate * 0.06)));
   const inverted = smooth.every((v) => v <= 0) ? smooth.map((v) => -v) : smooth;
+
+  // Peak detection with 380 ms blanking + 0.45 SD threshold.
   const peaks = detectPeaks(inverted, sampleRate);
-  const ibis = ibiMs(peaks, sampleRate);
-  const hr = ibis.length ? 60000 / mean(ibis) : 0;
-  const hrv = rmssd(ibis);
+
+  // Raw IBIs for RMSSD (HRV) — outlier-inclusive, as clinically expected.
+  const rawIbis = ibiMs(peaks, sampleRate);
+
+  // Trimmed-mean IBI for BPM — ±20 % outlier-rejected for accuracy.
+  const trimmedIbiMs = trimmedMeanIbi(rawIbis);
+  const hr = trimmedIbiMs > 0 ? 60000 / trimmedIbiMs : 0;
+
+  const hrv = rmssd(rawIbis);
+
   return {
     heartRate: Math.round(Math.min(160, Math.max(40, hr || 72))),
     hrvRmssd: Math.round(Math.min(120, Math.max(8, hrv || 24))),
-    signalQuality: signalQuality(samples, ibis, peaks, durationSec),
+    signalQuality: signalQualityScore(samples, rawIbis, peaks, durationSec),
     respiratoryRate: estimateRespiratoryRate(samples, sampleRate, peaks, durationSec),
     spo2Estimate: estimateSpo2(samples),
     peakCount: peaks.length,
@@ -255,6 +339,8 @@ export function processPpg(samples: number[], sampleRate = PPG_SAMPLE_RATE): Ppg
     sampleRate,
   };
 }
+
+// ── Demo signal helpers ───────────────────────────────────────────────────────
 
 export function nextSimulatedSample(
   tSec: number,

@@ -47,7 +47,7 @@ export function VitalsScanScreen() {
     );
   }
 
-  const { mode, phase, remaining, isContact, torchActive, error, result, liveBpm, rMean, dominance } = state;
+  const { mode, phase, remaining, isContact, torchActive, error, result, liveBpm, rMean, dominance, blanchingWarning } = state;
 
   const isScanning = phase === "running" || phase === "paused" || phase === "starting";
   const isStarting = phase === "starting";
@@ -241,9 +241,19 @@ export function VitalsScanScreen() {
             </div>
           ) : null}
 
+          {/* Pressure / Blanching Warning */}
+          {mode === "live" && blanchingWarning ? (
+            <div className="mt-2 flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-950/60 px-2.5 py-1.5">
+              <AlertTriangle className="size-3.5 shrink-0 text-amber-400" />
+              <p className="text-[11px] font-semibold text-amber-300">
+                Press more lightly — do not blanch skin
+              </p>
+            </div>
+          ) : null}
+
           <p className="mt-2 px-1 text-[11px] text-trace/75">
             {mode === "live"
-              ? "Live optical sensor mode · red-channel capillary microvascular absorption"
+              ? "Live optical sensor mode · green-channel (525 nm) haemoglobin absorption"
               : mode === "demo"
               ? "Simulated morphologically-accurate fingertip PPG (for web preview)"
               : "Zero-hardware vitals extraction"}

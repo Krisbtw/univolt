@@ -23,6 +23,16 @@ export interface LivePpgState {
   dominance: number;
   /** Live BPM estimate updated every ~500 ms during an active scan (null until enough peaks). */
   liveBpm: number | null;
+  /**
+   * AC amplitude of the green-channel PPG signal (rolling stdev over last 30 frames).
+   * Low amplitude + high red saturation indicates tissue blanching from excess pressure.
+   */
+  acAmplitude: number;
+  /**
+   * True when rMean is high (finger present & lit) but pulsatile AC amplitude is too
+   * low — indicates the user is pressing so hard the capillaries are blanched shut.
+   */
+  blanchingWarning: boolean;
 }
 
 const TOTAL_CAPTURE_MS = PPG_DURATION_SEC * 1000;
@@ -57,9 +67,22 @@ export function useLiveCameraPpg({
     rMean: 0,
     dominance: 0,
     liveBpm: null,
+    acAmplitude: 0,
+    blanchingWarning: false,
   });
 
-  // Raw red-channel samples fed to processPpg + exposed for waveform canvas.
+  /**
+   * Rolling green-channel AC amplitude (last N frames) for blanching detection.
+   * We keep a short window of recent gMean values and compute stdev as the AC proxy.
+   */
+  const recentGreenRef = useRef<number[]>([]);
+
+  /**
+   * Green-channel mean samples — the primary cardiac signal input.
+   * Green (~525 nm) sits at the primary absorption band of oxyhaemoglobin and
+   * is far less susceptible to subcutaneous motion artifacts than red.
+   * Red is retained solely for the finger-contact gate.
+   */
   const samplesRef = useRef<number[]>([]);
 
   const streamRef = useRef<MediaStream | null>(null);
@@ -218,13 +241,37 @@ export function useLiveCameraPpg({
       const bMean = bSum / pixelCount;
       const dominance = rMean / (gMean + bMean + 1);
 
-      // Finger Contact & Alignment Gate (DSP spec thresholds).
+      // Finger Contact & Alignment Gate — red channel + dominance ratio only.
       const isContact = rMean > CONTACT_R_THRESHOLD && dominance > CONTACT_DOMINANCE_THRESHOLD;
 
+      // Rolling green-channel window for AC amplitude (blanching detection).
+      // Keep the last 30 samples (~1 s at 30 fps).
+      recentGreenRef.current.push(gMean);
+      if (recentGreenRef.current.length > 30) recentGreenRef.current.shift();
+      const recentG = recentGreenRef.current;
+      const gAcAmplitude =
+        recentG.length > 4
+          ? (() => {
+              const gMeanMean = recentG.reduce((a, b) => a + b, 0) / recentG.length;
+              return Math.sqrt(
+                recentG.reduce((a, b) => a + (b - gMeanMean) ** 2, 0) / recentG.length,
+              );
+            })()
+          : 0;
+
+      /**
+       * Blanching warning: finger is present and lit (high rMean) but the
+       * green-channel pulsatile AC amplitude is too low — capillaries blanched
+       * shut by excess pressure.
+       * Thresholds: rMean > 160 (well-lit red), gAcAmplitude < 1.5 (weak pulse).
+       */
+      const blanchingWarning =
+        isContact && rMean > 160 && gAcAmplitude < 1.5 && recentG.length > 10;
+
       if (isContact) {
-        // Advance only when finger covers the lens.
+        // Advance timer and collect GREEN channel sample for cardiac peak detection.
         activeMsRef.current += dt;
-        samplesRef.current.push(rMean);
+        samplesRef.current.push(gMean); // ← green, not red
 
         const left = Math.max(0, Math.ceil((TOTAL_CAPTURE_MS - activeMsRef.current) / 1000));
 
@@ -246,6 +293,8 @@ export function useLiveCameraPpg({
           remaining: left,
           rMean,
           dominance,
+          acAmplitude: gAcAmplitude,
+          blanchingWarning,
           ...(liveBpm !== null ? { liveBpm } : {}),
         }));
 
@@ -264,6 +313,8 @@ export function useLiveCameraPpg({
           isContact: false,
           rMean,
           dominance,
+          acAmplitude: gAcAmplitude,
+          blanchingWarning: false, // no warning when no contact
         }));
       }
 
@@ -282,6 +333,7 @@ export function useLiveCameraPpg({
     modeRef.current = "live";
     phaseRef.current = "starting";
 
+    recentGreenRef.current = [];
     setState({
       mode: "live",
       phase: "starting",
@@ -293,6 +345,8 @@ export function useLiveCameraPpg({
       rMean: 0,
       dominance: 0,
       liveBpm: null,
+      acAmplitude: 0,
+      blanchingWarning: false,
     });
 
     try {
@@ -371,6 +425,8 @@ export function useLiveCameraPpg({
       rMean: 180,
       dominance: 2.1,
       liveBpm: null,
+      acAmplitude: 0,
+      blanchingWarning: false,
     });
 
     const bpm = 68 + Math.random() * 24;
@@ -414,6 +470,7 @@ export function useLiveCameraPpg({
     lastBpmCommitRef.current = 0;
     phaseRef.current = "idle";
     modeRef.current = "idle";
+    recentGreenRef.current = [];
     setState({
       mode: "idle",
       phase: "idle",
@@ -425,6 +482,8 @@ export function useLiveCameraPpg({
       rMean: 0,
       dominance: 0,
       liveBpm: null,
+      acAmplitude: 0,
+      blanchingWarning: false,
     });
   }, [cleanup]);
 

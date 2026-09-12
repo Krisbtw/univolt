@@ -84,7 +84,7 @@ function HomeScreen() {
               disabled={syncState === "syncing" || pendingCount === 0}
               className={`gap-1.5 transition-colors ${
                 syncState === "done"
-                  ? "border-pine/50 text-pine-fg"
+                  ? "border-pine/50 text-pine"
                   : "border-line text-muted hover:text-ink"
               }`}
             >

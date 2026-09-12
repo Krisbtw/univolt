@@ -432,7 +432,7 @@ function Metric({
       <p className="text-[11px] font-medium text-muted">{label}</p>
       <p
         className={`mt-0.5 font-display text-[1.45rem] font-semibold tabular-nums tracking-[-0.03em] ${
-          highlight ? "text-pine-fg" : "text-ink"
+          highlight ? "text-pine" : "text-ink"
         }`}
       >
         {value}

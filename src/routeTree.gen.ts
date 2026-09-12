@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as ScanRouteImport } from './routes/scan'
 import { Route as PatientIdRouteImport } from './routes/patient.$id'
 import { Route as PatientIdIndexRouteImport } from './routes/patient.$id.index'
 import { Route as PatientIdCoughRouteImport } from './routes/patient.$id.cough'
@@ -24,6 +25,11 @@ const IndexRoute = IndexRouteImport.update({
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ScanRoute = ScanRouteImport.update({
+  id: '/scan',
+  path: '/scan',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PatientIdRoute = PatientIdRouteImport.update({
@@ -50,6 +56,7 @@ const PatientIdScanRoute = PatientIdScanRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/register': typeof RegisterRoute
+  '/scan': typeof ScanRoute
   '/patient/$id': typeof PatientIdRouteWithChildren
   '/patient/$id/cough': typeof PatientIdCoughRoute
   '/patient/$id/scan': typeof PatientIdScanRoute
@@ -58,6 +65,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/register': typeof RegisterRoute
+  '/scan': typeof ScanRoute
   '/patient/$id/cough': typeof PatientIdCoughRoute
   '/patient/$id/scan': typeof PatientIdScanRoute
   '/patient/$id': typeof PatientIdIndexRoute
@@ -66,6 +74,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/register': typeof RegisterRoute
+  '/scan': typeof ScanRoute
   '/patient/$id': typeof PatientIdRouteWithChildren
   '/patient/$id/cough': typeof PatientIdCoughRoute
   '/patient/$id/scan': typeof PatientIdScanRoute
@@ -76,6 +85,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/register'
+    | '/scan'
     | '/patient/$id'
     | '/patient/$id/cough'
     | '/patient/$id/scan'
@@ -84,6 +94,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/register'
+    | '/scan'
     | '/patient/$id/cough'
     | '/patient/$id/scan'
     | '/patient/$id'
@@ -91,6 +102,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/register'
+    | '/scan'
     | '/patient/$id'
     | '/patient/$id/cough'
     | '/patient/$id/scan'
@@ -100,6 +112,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   RegisterRoute: typeof RegisterRoute
+  ScanRoute: typeof ScanRoute
   PatientIdRoute: typeof PatientIdRouteWithChildren
 }
 
@@ -117,6 +130,13 @@ declare module '@tanstack/react-router' {
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/scan': {
+      id: '/scan'
+      path: '/scan'
+      fullPath: '/scan'
+      preLoaderRoute: typeof ScanRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/patient/$id': {
@@ -169,6 +189,7 @@ const PatientIdRouteWithChildren = PatientIdRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   RegisterRoute: RegisterRoute,
+  ScanRoute: ScanRoute,
   PatientIdRoute: PatientIdRouteWithChildren,
 }
 export const routeTree = rootRouteImport

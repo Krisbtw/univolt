@@ -81,6 +81,30 @@ export interface Strings {
     fetRetry: string;
     micDeniedTitle: string;
     micDeniedBody: string;
+    // ── Task 1: CRT screen ────────────────────────────────────────────────
+    crtTitle: string;
+    crtAlignNail: string;
+    crtPressInstruction: string;
+    crtReleaseInstruction: string;
+    crtMeasuring: string;
+    crtResult: string;
+    crtNormal: string;
+    crtBorderline: string;
+    crtSlow: string;
+    crtFailed: string;
+    // ── Task 2: Referral slip screen ───────────────────────────────────────
+    referralTitle: string;
+    referralId: string;
+    referralTime: string;
+    referralVitals: string;
+    referralReasons: string;
+    referralPrint: string;
+    referralDownload: string;
+    referralScanMode: string;
+    referralScanInstructions: string;
+    referralScanUnsupported: string;
+    referralNoData: string;
+    referralHandoffTitle: string;
 }
 
 const en: Strings = {
@@ -191,6 +215,30 @@ const en: Strings = {
     fetRetry: "Retry",
     micDeniedTitle: "Microphone access blocked",
     micDeniedBody: "This test needs microphone access to measure your breathing time. Please enable the microphone and try again.",
+    // CRT
+    crtTitle: "Capillary Refill Test",
+    crtAlignNail: "Place your thumbnail in the centre box. Tap \"Ready\" when aligned.",
+    crtPressInstruction: "Press your thumbnail firmly for 5 seconds, then release.",
+    crtReleaseInstruction: "Release! Measuring colour recovery…",
+    crtMeasuring: "Measuring…",
+    crtResult: "Result",
+    crtNormal: "Normal (< 2 s)",
+    crtBorderline: "Borderline (2–3 s)",
+    crtSlow: "Slow (≥ 3 s) — refer",
+    crtFailed: "Unable to detect — lighting drift or recovery not seen",
+    // Referral slip
+    referralTitle: "Referral Slip",
+    referralId: "Case ID",
+    referralTime: "Time",
+    referralVitals: "Vitals",
+    referralReasons: "Clinical reasons",
+    referralPrint: "Print slip",
+    referralDownload: "Download PNG",
+    referralScanMode: "Scan QR code",
+    referralScanInstructions: "Point the camera at the QR code on the patient\u2019s slip to decode it.",
+    referralScanUnsupported: "QR scanning is not supported in this browser. Use your camera app to scan.",
+    referralNoData: "Complete at least one test before generating a referral.",
+    referralHandoffTitle: "Patient Handoff Card",
 };
 
 const hi: Strings = {
@@ -301,6 +349,30 @@ const hi: Strings = {
     fetRetry: "दोबारा प्रयास",
     micDeniedTitle: "माइक्रोफ़ोन पहुँच अवरुद्ध",
     micDeniedBody: "इस जाँच के लिए माइक्रोफ़ोन की आवश्यकता है। कृपया अनुमति दें और पुनः प्रयास करें।",
+    // CRT
+    crtTitle: "कैपिलरी रिफिल जाँच",
+    crtAlignNail: "अपना अंगूठा नाखुन बीच वाले बॉक्स में रखें। सही होने पर \"तैयार\" टैप करें।",
+    crtPressInstruction: "अंगूठा नाखुन को 5 सेकंड जोर से दबाएँ, फिर छोड़ें।",
+    crtReleaseInstruction: "छोड़ें! रंग वापसी माप जारी…",
+    crtMeasuring: "माप जारी…",
+    crtResult: "परिणाम",
+    crtNormal: "सामान्य (< 2 सेकंड)",
+    crtBorderline: "सीमा रेखा (2–3 सेकंड)",
+    crtSlow: "धीमा (≥3 सेकंड) — भेजें",
+    crtFailed: "पता नहीं चला — रोशनी आई या रिकवरी नहीं दिखी",
+    // Referral slip
+    referralTitle: "रेफरल पर्ची",
+    referralId: "केस आईडी",
+    referralTime: "समय",
+    referralVitals: "माप",
+    referralReasons: "नैदानिक कारण",
+    referralPrint: "पर्ची प्रिंट करें",
+    referralDownload: "PNG डाउनलोड करें",
+    referralScanMode: "QR कोड स्कैन करें",
+    referralScanInstructions: "मरीज़ की पर्ची का QR कोड कैमरे से स्कैन करें।",
+    referralScanUnsupported: "इस ब्राउज़र में QR स्कैन उपलब्ध नहीं है। कैमरा एप से स्कैन करें।",
+    referralNoData: "रेफरल तैयार करने से पहले कम से कम एक जाँच पूरी करें।",
+    referralHandoffTitle: "मरीज़ हैंडऑफ कार्ड",
 };
 
 const STRINGS: Record<Locale, Strings> = { en, hi };

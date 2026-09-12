@@ -163,9 +163,11 @@ export function FusionScreen() {
           </div>
         )}
 
-        {/* Nav to FET */}
+        {/* Nav links to all tests + referral */}
         <div style={navRowStyle}>
-          <Link to={("/fet") as any} style={ctaLinkStyle}>🫁 Run Breathing Time Test</Link>
+          <Link to={("/fet") as any} style={ctaLinkStyle}>🫁 Breathing Test</Link>
+          <Link to={("/crt") as any} style={ctaLinkStyle}>💅 CRT Test</Link>
+          <Link to={("/referral") as any} style={{ ...ctaLinkStyle, color: "#fbbf24", background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.3)" }}>📋 Referral Slip</Link>
         </div>
 
         <p style={disclaimerStyle}>Not a medical device. For screening and education only.</p>
@@ -211,6 +213,6 @@ function reasonDotStyle(weight: number): CSSProperties {
   const color = weight >= 10 ? "#f87171" : weight >= 5 ? "#fbbf24" : "#4ade80";
   return { width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 };
 }
-const navRowStyle: CSSProperties = { display: "flex", justifyContent: "center" };
+const navRowStyle: CSSProperties = { display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center" };
 const ctaLinkStyle: CSSProperties = { background: "#0f172a", border: "1px solid #1e293b", borderRadius: 10, padding: "12px 20px", color: "#34d399", fontSize: 14, fontWeight: 600, textDecoration: "none" };
 const disclaimerStyle: CSSProperties = { margin: 0, fontSize: 11, color: "#475569", textAlign: "center" };

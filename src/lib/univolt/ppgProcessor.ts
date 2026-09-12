@@ -104,16 +104,17 @@ function bandpass(xs: number[], sampleRate: number, lowHz: number, highHz: numbe
 // ── IBI outlier rejection ─────────────────────────────────────────────────────
 
 /**
- * Discard any inter-beat interval that deviates more than 20 % from the
- * median IBI. This rejects premature ectopic beats and motion artifacts.
- * Returns the trimmed mean of the surviving IBIs (in ms).
+ * Discard any inter-beat interval that deviates more than 30 % from the
+ * median IBI. This rejects ectopic beats and motion artifacts while retaining
+ * valid accelerated cycles during respiratory sinus arrhythmia (RSA).
+ * Returns the median of the surviving IBIs (in ms) — robust to remaining outliers.
  */
-function trimmedMeanIbi(ibis: number[]): number {
+function robustMedianIbi(ibis: number[]): number {
   if (ibis.length === 0) return 0;
   const med = median(ibis);
-  const filtered = ibis.filter((ibi) => Math.abs(ibi - med) / med <= 0.20);
-  if (filtered.length === 0) return med; // fallback: use median if all rejected
-  return mean(filtered);
+  const filtered = ibis.filter((ibi) => Math.abs(ibi - med) / med <= 0.30);
+  // Fall back to raw median if the filter discards everything (very noisy signal).
+  return median(filtered.length > 0 ? filtered : ibis);
 }
 
 // ── Peak detection ────────────────────────────────────────────────────────────
@@ -122,22 +123,23 @@ function trimmedMeanIbi(ibis: number[]): number {
  * Detects systolic peaks in a bandpassed PPG signal.
  *
  * Key parameters (per DSP spec):
- *  - Refractory / blanking window: **380 ms** (≤158 BPM cap) — suppresses
- *    the dicrotic notch that caused 10–12 BPM overcounting.
- *  - Adaptive threshold: Mean + **0.45 × SD** — triggers exclusively on
- *    the prominent systolic peak, not the smaller reflected notch.
+ *  - Refractory / blanking window: **320 ms** (≤187 BPM cap) — long enough to
+ *    suppress the dicrotic notch (~250 ms post-systole) while allowing genuine
+ *    closely-spaced beats from natural HRV through.
+ *  - Adaptive threshold: Mean + **0.35 × SD** — low enough to catch
+ *    lower-amplitude systolic peaks while staying clear of the dicrotic notch.
  */
 export function detectPeaks(
   signal: number[],
   sampleRate: number,
   minBpm = 40,
-  maxBpm = 158, // hard ceiling enforced by 380 ms blanking
+  maxBpm = 187, // hard ceiling enforced by 320 ms blanking
 ): number[] {
   if (signal.length < 5) return [];
 
-  // Blanking window: 380 ms — any peak within this window of a prior peak is
-  // discarded, preventing double-counting of the dicrotic notch.
-  const blankingSamples = Math.max(2, Math.round((380 / 1000) * sampleRate));
+  // Blanking window: 320 ms — suppresses the dicrotic notch (~250 ms post-systole)
+  // while allowing genuine closely-spaced beats from HRV through.
+  const blankingSamples = Math.max(2, Math.round((320 / 1000) * sampleRate));
 
   // Physiological IBI bounds
   const minIbi = (60 / maxBpm) * sampleRate; // same as blanking for 158 BPM
@@ -145,8 +147,9 @@ export function detectPeaks(
 
   const m = mean(signal);
   const sd = stdev(signal) || 1;
-  // Raised threshold (0.45 × SD) ensures only the dominant systolic peak triggers.
-  const thresh = m + 0.45 * sd;
+  // Threshold at 0.35 × SD: catches lower-amplitude systolic peaks while
+  // remaining well above the dicrotic notch (typically 30-40% of systolic height).
+  const thresh = m + 0.35 * sd;
 
   // Pass 1: local maxima above threshold with 2-sample neighbourhood check.
   const candidates: number[] = [];
@@ -322,9 +325,10 @@ export function processPpg(samples: number[], sampleRate = PPG_SAMPLE_RATE): Ppg
   // Raw IBIs for RMSSD (HRV) — outlier-inclusive, as clinically expected.
   const rawIbis = ibiMs(peaks, sampleRate);
 
-  // Trimmed-mean IBI for BPM — ±20 % outlier-rejected for accuracy.
-  const trimmedIbiMs = trimmedMeanIbi(rawIbis);
-  const hr = trimmedIbiMs > 0 ? 60000 / trimmedIbiMs : 0;
+  // Robust median IBI for BPM — ±30 % outlier-rejected, then median for rate.
+  // Median is more robust than mean to any remaining RSA/ectopic outliers.
+  const robustIbiMs = robustMedianIbi(rawIbis);
+  const hr = robustIbiMs > 0 ? 60000 / robustIbiMs : 0;
 
   const hrv = rmssd(rawIbis);
 

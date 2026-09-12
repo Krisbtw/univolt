@@ -5,6 +5,7 @@ import {
   detectPeaks,
   nextSimulatedSample,
   processPpg,
+  processPpgWithTimestamps,
 } from "@/lib/univolt/ppgProcessor";
 import type { PpgResult } from "@/lib/univolt/types";
 
@@ -78,12 +79,19 @@ export function useLiveCameraPpg({
   const recentGreenRef = useRef<number[]>([]);
 
   /**
-   * Green-channel mean samples — the primary cardiac signal input.
-   * Green (~525 nm) sits at the primary absorption band of oxyhaemoglobin and
-   * is far less susceptible to subcutaneous motion artifacts than red.
+   * Green-channel mean samples — primary cardiac signal input.
+   * Green (~525 nm) is at the primary absorption band of oxyhaemoglobin.
    * Red is retained solely for the finger-contact gate.
    */
   const samplesRef = useRef<number[]>([]);
+
+  /**
+   * Real `performance.now()` timestamps (ms) recorded for each accepted frame.
+   * Parallel array to samplesRef — index k corresponds to the same frame.
+   * Used by processPpgWithTimestamps to compute IBIs from real elapsed time,
+   * eliminating BPM error caused by mobile browser frame-rate variability.
+   */
+  const timestampsRef = useRef<number[]>([]);
 
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number | null>(null);
@@ -133,13 +141,18 @@ export function useLiveCameraPpg({
 
   // ── finalization ─────────────────────────────────────────────────────────
   const finalizeScan = useCallback(
-    (samples: number[], rate: number) => {
+    (samples: number[], rate: number, timestamps?: number[]) => {
       phaseRef.current = "processing";
       setState((prev) => ({ ...prev, phase: "processing", liveBpm: null }));
       cleanup();
 
       window.setTimeout(() => {
-        const processed = processPpg(samples, rate);
+        // Live path: use real frame timestamps for accurate IBI computation.
+        // Demo path: fall back to uniform-rate processPpg.
+        const processed =
+          timestamps && timestamps.length === samples.length
+            ? processPpgWithTimestamps(samples, timestamps)
+            : processPpg(samples, rate);
         phaseRef.current = "done";
         setState((prev) => ({
           ...prev,
@@ -153,20 +166,41 @@ export function useLiveCameraPpg({
   );
 
   // ── live BPM estimator (called from processFrame) ────────────────────────
-  const deriveLiveBpm = useCallback((samples: number[], rate: number): number | null => {
-    if (samples.length < Math.floor(rate * 3)) return null; // need ≥ 3 s
-    // Use the last 6 s of samples for a rolling estimate.
-    const window = samples.slice(-Math.floor(rate * 6));
-    const peaks = detectPeaks(window, rate);
-    if (peaks.length < 3) return null;
-    const ibis: number[] = [];
-    for (let i = 1; i < peaks.length; i++) {
-      ibis.push(((peaks[i]! - peaks[i - 1]!) / rate) * 1000);
-    }
-    const mean = ibis.reduce((a, b) => a + b, 0) / ibis.length;
-    const bpm = Math.round(Math.min(160, Math.max(40, 60000 / mean)));
-    return bpm;
-  }, []);
+  /**
+   * Rolling BPM estimate using real timestamps for the last 6 s of samples.
+   * Falls back to index-based IBIs when fewer than 3 s of data are available.
+   */
+  const deriveLiveBpm = useCallback(
+    (samples: number[], timestamps: number[]): number | null => {
+      if (samples.length < 10 || timestamps.length !== samples.length) return null;
+
+      // Take the most recent 6 s worth of frames.
+      const tNow = timestamps[timestamps.length - 1]!;
+      const cutoff = tNow - 6000;
+      let startIdx = 0;
+      for (let i = timestamps.length - 1; i >= 0; i--) {
+        if (timestamps[i]! < cutoff) { startIdx = i + 1; break; }
+      }
+      const win = samples.slice(startIdx);
+      const winTs = timestamps.slice(startIdx);
+      if (win.length < 10) return null;
+
+      // Use the timestamp-aware peak detector on the windowed signal.
+      const dc = win.reduce((a, b) => a + b, 0) / win.length;
+      const centered = win.map((x) => x - dc);
+      const peaks = detectPeaks(centered, win.length / ((winTs[winTs.length - 1]! - winTs[0]!) / 1000 || 1));
+      if (peaks.length < 3) return null;
+
+      // Compute IBIs from real timestamps.
+      const ibis: number[] = [];
+      for (let i = 1; i < peaks.length; i++) {
+        ibis.push(winTs[peaks[i]!]! - winTs[peaks[i - 1]!]!);
+      }
+      const med = ibis.slice().sort((a, b) => a - b)[Math.floor(ibis.length / 2)]!;
+      return Math.round(Math.min(220, Math.max(40, 60000 / med)));
+    },
+    [],
+  );
 
   // ── optical frame processing loop (live mode) ────────────────────────────
   const processFrame = useCallback(
@@ -269,9 +303,10 @@ export function useLiveCameraPpg({
         isContact && rMean > 160 && gAcAmplitude < 1.5 && recentG.length > 10;
 
       if (isContact) {
-        // Advance timer and collect GREEN channel sample for cardiac peak detection.
+        // Advance timer and collect GREEN channel sample + real timestamp.
         activeMsRef.current += dt;
-        samplesRef.current.push(gMean); // ← green, not red
+        samplesRef.current.push(gMean);       // ← green channel for cardiac signal
+        timestampsRef.current.push(now);      // ← real performance.now() ms
 
         const left = Math.max(0, Math.ceil((TOTAL_CAPTURE_MS - activeMsRef.current) / 1000));
 
@@ -279,11 +314,11 @@ export function useLiveCameraPpg({
           phaseRef.current = "running";
         }
 
-        // Rolling BPM estimate, committed at BPM_COMMIT_INTERVAL_MS cadence.
+        // Rolling BPM estimate using real timestamps, committed every 500 ms.
         let liveBpm: number | null = null;
         if (now - lastBpmCommitRef.current >= BPM_COMMIT_INTERVAL_MS) {
           lastBpmCommitRef.current = now;
-          liveBpm = deriveLiveBpm(samplesRef.current, PROCESS_W); // piggyback rate = 30
+          liveBpm = deriveLiveBpm(samplesRef.current, timestampsRef.current);
         }
 
         setState((prev) => ({
@@ -299,7 +334,8 @@ export function useLiveCameraPpg({
         }));
 
         if (activeMsRef.current >= TOTAL_CAPTURE_MS) {
-          finalizeScan(samplesRef.current.slice(), 30);
+          // Pass real timestamps to the finalization pipeline.
+          finalizeScan(samplesRef.current.slice(), 30, timestampsRef.current.slice());
           return;
         }
       } else {
@@ -327,6 +363,7 @@ export function useLiveCameraPpg({
   const startLiveScan = useCallback(async () => {
     cleanup();
     samplesRef.current = [];
+    timestampsRef.current = [];
     activeMsRef.current = 0;
     lastFrameTimeRef.current = 0;
     lastBpmCommitRef.current = 0;
@@ -410,6 +447,7 @@ export function useLiveCameraPpg({
   const startDemoScan = useCallback(() => {
     cleanup();
     samplesRef.current = [];
+    timestampsRef.current = [];
     demoPhaseRef.current.current = Math.random();
     modeRef.current = "demo";
     phaseRef.current = "running";
@@ -465,6 +503,7 @@ export function useLiveCameraPpg({
   const resetScan = useCallback(() => {
     cleanup();
     samplesRef.current = [];
+    timestampsRef.current = [];
     activeMsRef.current = 0;
     lastFrameTimeRef.current = 0;
     lastBpmCommitRef.current = 0;

@@ -55,6 +55,32 @@ export interface Strings {
     clearHistoryButton: string;
     disclaimer: string;
     guidance: GuidanceStrings;
+    // ── Task 2: Fusion screen ─────────────────────────────────────────────
+    fusionTitle: string;
+    fusionSelfCare: string;
+    fusionPhcToday: string;
+    fusionUrgent: string;
+    fusionInsufficient: string;
+    fusionReasonsTitle: string;
+    questionnaireAge: string;
+    questionnairePregnant: string;
+    symptomBreathless: string;
+    symptomChestPain: string;
+    symptomFainting: string;
+    symptomBleeding: string;
+    symptomFeverDays: string;
+    // ── Task 3: FET screen ────────────────────────────────────────────────
+    fetTitle: string;
+    fetInstruction: string;
+    fetCalibrating: string;
+    fetRecording: string;
+    fetResult: string;
+    fetNormal: string;
+    fetBorderline: string;
+    fetObstruction: string;
+    fetRetry: string;
+    micDeniedTitle: string;
+    micDeniedBody: string;
 }
 
 const en: Strings = {
@@ -139,6 +165,32 @@ const en: Strings = {
             },
         },
     },
+    // Task 2
+    fusionTitle: "Triage Summary",
+    fusionSelfCare: "Self-care at home",
+    fusionPhcToday: "Visit PHC today",
+    fusionUrgent: "URGENT — Go now",
+    fusionInsufficient: "Insufficient data",
+    fusionReasonsTitle: "Reasons",
+    questionnaireAge: "Age (years)",
+    questionnairePregnant: "Currently pregnant",
+    symptomBreathless: "Breathlessness",
+    symptomChestPain: "Chest pain",
+    symptomFainting: "Fainting / loss of consciousness",
+    symptomBleeding: "Bleeding (external)",
+    symptomFeverDays: "Days of fever",
+    // Task 3
+    fetTitle: "Breathing Time Test",
+    fetInstruction: "Take the deepest breath you can, then blow ALL the air out through your open mouth until your lungs feel empty.",
+    fetCalibrating: "Calibrating microphone…",
+    fetRecording: "Recording — keep blowing!",
+    fetResult: "Result",
+    fetNormal: "Normal (< 4 s)",
+    fetBorderline: "Borderline (4–6 s)",
+    fetObstruction: "Possible obstruction (> 6 s)",
+    fetRetry: "Retry",
+    micDeniedTitle: "Microphone access blocked",
+    micDeniedBody: "This test needs microphone access to measure your breathing time. Please enable the microphone and try again.",
 };
 
 const hi: Strings = {
@@ -223,6 +275,32 @@ const hi: Strings = {
             },
         },
     },
+    // Task 2
+    fusionTitle: "ट्राइज सारांश",
+    fusionSelfCare: "घर पर स्व-देखभाल",
+    fusionPhcToday: "आज PHC जाएँ",
+    fusionUrgent: "तत्काल — अभी जाएँ",
+    fusionInsufficient: "डेटा अपर्याप्त",
+    fusionReasonsTitle: "कारण",
+    questionnaireAge: "आयु (वर्ष)",
+    questionnairePregnant: "वर्तमान में गर्भवती",
+    symptomBreathless: "सांस फूलना",
+    symptomChestPain: "सीने में दर्द",
+    symptomFainting: "बेहोशी / चेतना खोना",
+    symptomBleeding: "बाहरी रक्तस्राव",
+    symptomFeverDays: "बुखार के दिन",
+    // Task 3
+    fetTitle: "श्वास समय जाँच",
+    fetInstruction: "जितना हो सके उतना गहरा साँस लें, फिर मुँह खोलकर सारी हवा बाहर फूँकें जब तक फेफड़े खाली न हो जाएँ।",
+    fetCalibrating: "माइक्रोफ़ोन जाँच जारी…",
+    fetRecording: "रिकॉर्डिंग — फूँकते रहें!",
+    fetResult: "परिणाम",
+    fetNormal: "सामान्य (< 4 सेकंड)",
+    fetBorderline: "सीमा रेखा (4–6 सेकंड)",
+    fetObstruction: "संभावित अवरोध (> 6 सेकंड)",
+    fetRetry: "दोबारा प्रयास",
+    micDeniedTitle: "माइक्रोफ़ोन पहुँच अवरुद्ध",
+    micDeniedBody: "इस जाँच के लिए माइक्रोफ़ोन की आवश्यकता है। कृपया अनुमति दें और पुनः प्रयास करें।",
 };
 
 const STRINGS: Record<Locale, Strings> = { en, hi };

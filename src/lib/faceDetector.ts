@@ -14,9 +14,9 @@ export interface RoiRect {
     h: number;
 }
 
-const WASM_BASE = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm";
-const MODEL_URL =
-    "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite";
+/** Self-hosted MediaPipe assets — served from /public/, work offline after first load. */
+const WASM_BASE = "/mediapipe/wasm";
+const MODEL_URL = "/models/blaze_face_short_range.tflite";
 
 let detectorPromise: Promise<FaceDetector | null> | null = null;
 
@@ -28,7 +28,7 @@ export function loadFaceDetector(): Promise<FaceDetector | null> {
                 const fileset = await FilesetResolver.forVisionTasks(WASM_BASE);
                 return await FaceDetector.createFromModelPath(fileset, MODEL_URL);
             } catch {
-                return null; // offline / blocked CDN → caller falls back to the skin-ROI heuristic
+                return null; // model unavailable (first offline load) → caller uses skin-ROI heuristic
             }
         })();
     }

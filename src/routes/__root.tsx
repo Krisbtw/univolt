@@ -6,6 +6,17 @@ import { BootScreen } from "@/components/app-shell";
 import { useUnivolt } from "@/lib/univolt/store";
 import appCss from "../styles.css?url";
 
+// Register service worker once on client — safe for SSR (typeof window guard).
+if (typeof window !== "undefined") {
+  window.addEventListener("load", () => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch((err) => {
+        console.warn("[SW] registration failed:", err);
+      });
+    }
+  });
+}
+
 const APP_NAME = "Univolt";
 
 export const Route = createRootRoute({

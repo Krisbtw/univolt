@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import { SCAN_DURATION_MS, useRppgScan, type Status } from "../hooks/useRppgScan";
 import { evaluateTriage, type TriageResult } from "../lib/triage";
 import { getStrings, type Locale, type Strings } from "../lib/translations";
+import { useFusionSession } from "../lib/fusionStore";
 import {
     clearScans,
     loadLocale,
@@ -28,12 +29,14 @@ export function VitalsScanScreen() {
         [state.result],
     );
 
+    const setRppg = useFusionSession((s) => s.setRppg);
+
     const [history, setHistory] = useState<ScanRecord[]>(() => loadScans());
     const savedScanIdsRef = useRef<Set<string>>(new Set());
     useEffect(() => {
         const result = state.result;
         if (result === null || triage === null) return;
-        if (savedScanIdsRef.current.has(result.scanId)) return; // persist exactly once per scan
+        if (savedScanIdsRef.current.has(result.scanId)) return;
         savedScanIdsRef.current.add(result.scanId);
         saveScan({
             id: result.scanId,
@@ -46,8 +49,10 @@ export function VitalsScanScreen() {
             locale,
             triageLevel: triage.level,
         });
+        // Task 2: feed rPPG result into the fusion session store
+        setRppg({ bpm: result.bpm, rr: result.rr, hrv: result.hrv, quality: result.quality });
         setHistory(loadScans());
-    }, [state.result, triage, locale]);
+    }, [state.result, triage, locale, setRppg]);
 
     // --- Feature 5: Manual entry state ---
     const [showManual, setShowManual] = useState(false);

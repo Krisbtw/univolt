@@ -10,6 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as FetRouteImport } from './routes/fet'
+import { Route as FusionRouteImport } from './routes/fusion'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ScanRouteImport } from './routes/scan'
 import { Route as PatientIdRouteImport } from './routes/patient.$id'
@@ -20,6 +22,16 @@ import { Route as PatientIdScanRouteImport } from './routes/patient.$id.scan'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FetRoute = FetRouteImport.update({
+  id: '/fet',
+  path: '/fet',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FusionRoute = FusionRouteImport.update({
+  id: '/fusion',
+  path: '/fusion',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RegisterRoute = RegisterRouteImport.update({
@@ -55,6 +67,8 @@ const PatientIdScanRoute = PatientIdScanRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/fet': typeof FetRoute
+  '/fusion': typeof FusionRoute
   '/register': typeof RegisterRoute
   '/scan': typeof ScanRoute
   '/patient/$id': typeof PatientIdRouteWithChildren
@@ -64,6 +78,8 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/fet': typeof FetRoute
+  '/fusion': typeof FusionRoute
   '/register': typeof RegisterRoute
   '/scan': typeof ScanRoute
   '/patient/$id/cough': typeof PatientIdCoughRoute
@@ -73,6 +89,8 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/fet': typeof FetRoute
+  '/fusion': typeof FusionRoute
   '/register': typeof RegisterRoute
   '/scan': typeof ScanRoute
   '/patient/$id': typeof PatientIdRouteWithChildren
@@ -84,6 +102,8 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/fet'
+    | '/fusion'
     | '/register'
     | '/scan'
     | '/patient/$id'
@@ -93,6 +113,8 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/fet'
+    | '/fusion'
     | '/register'
     | '/scan'
     | '/patient/$id/cough'
@@ -101,6 +123,8 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/fet'
+    | '/fusion'
     | '/register'
     | '/scan'
     | '/patient/$id'
@@ -111,6 +135,8 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  FetRoute: typeof FetRoute
+  FusionRoute: typeof FusionRoute
   RegisterRoute: typeof RegisterRoute
   ScanRoute: typeof ScanRoute
   PatientIdRoute: typeof PatientIdRouteWithChildren
@@ -123,6 +149,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fet': {
+      id: '/fet'
+      path: '/fet'
+      fullPath: '/fet'
+      preLoaderRoute: typeof FetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fusion': {
+      id: '/fusion'
+      path: '/fusion'
+      fullPath: '/fusion'
+      preLoaderRoute: typeof FusionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/register': {
@@ -188,6 +228,8 @@ const PatientIdRouteWithChildren = PatientIdRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  FetRoute: FetRoute,
+  FusionRoute: FusionRoute,
   RegisterRoute: RegisterRoute,
   ScanRoute: ScanRoute,
   PatientIdRoute: PatientIdRouteWithChildren,

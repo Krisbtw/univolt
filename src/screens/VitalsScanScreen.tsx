@@ -6,6 +6,7 @@ import {
     clearScans,
     loadLocale,
     loadScans,
+    makeId,
     saveLocale,
     saveScan,
     type ScanRecord,
@@ -47,6 +48,30 @@ export function VitalsScanScreen() {
         });
         setHistory(loadScans());
     }, [state.result, triage, locale]);
+
+    // --- Feature 5: Manual entry state ---
+    const [showManual, setShowManual] = useState(false);
+
+    const handleManualSave = useCallback(
+        (bpm: number, spo2: number, rr: number): void => {
+            const triage = evaluateTriage({ bpm, hrv: null, spo2, rr });
+            const record: ScanRecord = {
+                id: makeId(),
+                timestamp: Date.now(),
+                mode: "manual",
+                bpm,
+                hrv: null,
+                spo2,
+                rr,
+                locale,
+                triageLevel: triage.level,
+            };
+            saveScan(record);
+            setHistory(loadScans());
+            setShowManual(false);
+        },
+        [locale],
+    );
 
     const handleClearHistory = useCallback((): void => {
         clearScans();
@@ -132,6 +157,23 @@ export function VitalsScanScreen() {
                     )}
                 </section>
 
+                {/* Feature 5: Manual entry toggle — shown when idle or permission denied */}
+                {(state.phase === "idle" || showPermissionFallback) && !showManual && (
+                    <button
+                        style={secondaryButtonStyle}
+                        onClick={() => setShowManual(true)}
+                    >
+                        📋 Camera failed? Enter vitals manually
+                    </button>
+                )}
+                {showManual && (
+                    <ManualEntryForm
+                        t={t}
+                        onSave={handleManualSave}
+                        onCancel={() => setShowManual(false)}
+                    />
+                )}
+
                 {result === null ? (
                     <div style={metricsRowStyle}>
                         <MetricTile
@@ -141,6 +183,7 @@ export function VitalsScanScreen() {
                             note={null}
                             placeholder={t.placeholder}
                             separator={t.separator}
+                            icon={METRIC_ICONS.heartRate}
                         />
                         <MetricTile
                             label={t.metricHrv}
@@ -149,6 +192,7 @@ export function VitalsScanScreen() {
                             note={null}
                             placeholder={t.placeholder}
                             separator={t.separator}
+                            icon={METRIC_ICONS.hrv}
                         />
                         <MetricTile
                             label={t.metricRespRate}
@@ -157,6 +201,7 @@ export function VitalsScanScreen() {
                             note={t.metricRespRateNote}
                             placeholder={t.placeholder}
                             separator={t.separator}
+                            icon={METRIC_ICONS.respRate}
                         />
                     </div>
                 ) : detected ? (
@@ -169,6 +214,7 @@ export function VitalsScanScreen() {
                                 note={null}
                                 placeholder={t.placeholder}
                                 separator={t.separator}
+                                icon={METRIC_ICONS.heartRate}
                             />
                             <MetricTile
                                 label={t.metricHrv}
@@ -177,6 +223,7 @@ export function VitalsScanScreen() {
                                 note={null}
                                 placeholder={t.placeholder}
                                 separator={t.separator}
+                                icon={METRIC_ICONS.hrv}
                             />
                             <MetricTile
                                 label={t.metricRespRate}
@@ -185,6 +232,7 @@ export function VitalsScanScreen() {
                                 note={t.metricRespRateNote}
                                 placeholder={t.placeholder}
                                 separator={t.separator}
+                                icon={METRIC_ICONS.respRate}
                             />
                         </div>
                         <p style={qualityStyle}>
@@ -215,6 +263,14 @@ export function VitalsScanScreen() {
 }
 
 // ---------- sub-components (all copy comes from translations.ts) ----------
+// Feature 4: metric icons
+const METRIC_ICONS: Record<string, string> = {
+    heartRate: "❤️",
+    hrv: "💓",
+    respRate: "🫁",
+    spo2: "🩸",
+};
+
 interface MetricTileProps {
     label: string;
     value: number | null;
@@ -222,11 +278,14 @@ interface MetricTileProps {
     note: string | null;
     placeholder: string;
     separator: string;
+    icon?: string;
 }
-function MetricTile({ label, value, unit, note, placeholder, separator }: MetricTileProps) {
+function MetricTile({ label, value, unit, note, placeholder, separator, icon }: MetricTileProps) {
     return (
         <div style={metricTileStyle}>
-            <span style={metricLabelStyle}>{label}</span>
+            <span style={metricLabelStyle}>
+                {icon ? <span style={{ marginRight: 4 }}>{icon}</span> : null}{label}
+            </span>
             <span style={metricValueStyle}>
                 {value === null ? placeholder : Math.round(value)}
                 <span style={metricUnitStyle}>{unit}</span>
@@ -268,6 +327,13 @@ interface GuidanceCardProps {
 function GuidanceCard({ t, triage, locale, onSetLocale }: GuidanceCardProps) {
     const branch = t.guidance.triage[triage.level];
     const headingColor = triage.urgent ? "#f87171" : triage.referral ? "#fbbf24" : "#4ade80";
+
+    // Feature 3: SMS share
+    function handleSmsShare() {
+        const text = `[Univolt Health] ${branch.title}\n${branch.body}`;
+        window.open("sms:?body=" + encodeURIComponent(text));
+    }
+
     return (
         <div style={guidanceCardStyle}>
             <div style={guidanceHeaderStyle}>
@@ -299,6 +365,10 @@ function GuidanceCard({ t, triage, locale, onSetLocale }: GuidanceCardProps) {
                     {t.guidance.referralLine}
                 </p>
             )}
+            {/* Feature 3: Share via SMS */}
+            <button style={smsButtonStyle} onClick={handleSmsShare}>
+                📱 Share via SMS / WhatsApp
+            </button>
         </div>
     );
 }
@@ -325,12 +395,13 @@ function HistoryList({ history, t, onClear }: HistoryListProps) {
                 <ul style={historyListStyle}>
                     {history.map((record) => (
                         <li key={record.id} style={historyRowStyle}>
-                            <span
-                                style={historyDateStyle}
-                            >{formatTimestamp(record.timestamp, record.locale)}</span>
-                            <span style={liveBadgeStyle}>{t.liveBadge}</span>
+                            <span style={historyDateStyle}>{formatTimestamp(record.timestamp, record.locale)}</span>
+                            <span style={liveBadgeStyle}>
+                                {record.mode === "manual" ? "✍️ Manual" : t.liveBadge}
+                            </span>
+                            {/* Feature 4: icons in history rows */}
                             <span style={historyMetricsStyle}>
-                                {`${t.metricHeartRate}: ${record.bpm ?? t.placeholder} ${t.metricHeartRateUnit}${t.separator}${t.metricRespRate}: ${record.rr ?? t.placeholder} ${t.metricRespRateUnit}`}
+                                {`❤️ ${t.metricHeartRate}: ${record.bpm ?? t.placeholder} ${t.metricHeartRateUnit}${t.separator}🫁 ${t.metricRespRate}: ${record.rr ?? t.placeholder} ${t.metricRespRateUnit}${record.spo2 != null ? `${t.separator}🩸 SpO₂: ${record.spo2}%` : ""}`}
                             </span>
                             <span style={historyTriageStyle}>
                                 {t.guidance.triage[record.triageLevel].title}
@@ -635,3 +706,120 @@ const disclaimerStyle: CSSProperties = {
     color: "#64748b",
     textAlign: "center",
 };
+const secondaryButtonStyle: CSSProperties = {
+    background: "transparent",
+    color: "#94a3b8",
+    border: "1px solid #334155",
+    borderRadius: 10,
+    padding: "10px 16px",
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: "pointer",
+    textAlign: "left",
+};
+const smsButtonStyle: CSSProperties = {
+    marginTop: 12,
+    background: "rgba(52,211,153,0.10)",
+    color: "#34d399",
+    border: "1px solid rgba(52,211,153,0.35)",
+    borderRadius: 8,
+    padding: "9px 14px",
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: "pointer",
+    display: "block",
+    width: "100%",
+};
+const manualCardStyle: CSSProperties = {
+    background: "#0f172a",
+    border: "1px solid #1e293b",
+    borderRadius: 12,
+    padding: "16px 18px",
+    display: "flex",
+    flexDirection: "column",
+    gap: 12,
+};
+const manualLabelStyle: CSSProperties = { fontSize: 13, color: "#94a3b8", fontWeight: 600 };
+const manualInputStyle: CSSProperties = {
+    display: "block",
+    width: "100%",
+    background: "#020617",
+    border: "1px solid #334155",
+    borderRadius: 8,
+    padding: "10px 12px",
+    fontSize: 16,
+    color: "#e2e8f0",
+    marginTop: 4,
+    boxSizing: "border-box" as const,
+};
+
+// ── Feature 5: Manual vitals entry form ─────────────────────────────────────
+interface ManualEntryFormProps {
+    t: Strings;
+    onSave: (bpm: number, spo2: number, rr: number) => void;
+    onCancel: () => void;
+}
+function ManualEntryForm({ onSave, onCancel }: ManualEntryFormProps) {
+    const [bpm, setBpm] = useState("");
+    const [spo2, setSpo2] = useState("");
+    const [rr, setRr] = useState("");
+    const [error, setError] = useState<string | null>(null);
+
+    function handleSave() {
+        const b = parseInt(bpm, 10);
+        const s = parseInt(spo2, 10);
+        const r = parseInt(rr, 10);
+        if (isNaN(b) || b < 30 || b > 220) { setError("Heart rate must be 30–220 BPM."); return; }
+        if (isNaN(s) || s < 70 || s > 100) { setError("SpO₂ must be 70–100%."); return; }
+        if (isNaN(r) || r < 4 || r > 60) { setError("Respiratory rate must be 4–60 /min."); return; }
+        setError(null);
+        onSave(b, s, r);
+    }
+
+    return (
+        <div style={manualCardStyle}>
+            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>✍️ Manual Vitals Entry</h3>
+            {error && <p style={{ margin: 0, fontSize: 12, color: "#f87171" }}>{error}</p>}
+            <label style={manualLabelStyle}>
+                ❤️ Heart Rate (BPM)
+                <input
+                    type="number"
+                    min={30} max={220}
+                    value={bpm}
+                    onChange={(e) => setBpm(e.target.value)}
+                    placeholder="e.g. 75"
+                    style={manualInputStyle}
+                    inputMode="numeric"
+                />
+            </label>
+            <label style={manualLabelStyle}>
+                🩸 SpO₂ (%)
+                <input
+                    type="number"
+                    min={70} max={100}
+                    value={spo2}
+                    onChange={(e) => setSpo2(e.target.value)}
+                    placeholder="e.g. 97"
+                    style={manualInputStyle}
+                    inputMode="numeric"
+                />
+            </label>
+            <label style={manualLabelStyle}>
+                🫁 Respiratory Rate (/min)
+                <input
+                    type="number"
+                    min={4} max={60}
+                    value={rr}
+                    onChange={(e) => setRr(e.target.value)}
+                    placeholder="e.g. 16"
+                    style={manualInputStyle}
+                    inputMode="numeric"
+                />
+            </label>
+            <div style={{ display: "flex", gap: 8 }}>
+                <button style={primaryButtonStyle} onClick={handleSave}>Save Manual Scan</button>
+                <button style={secondaryButtonStyle} onClick={onCancel}>Cancel</button>
+            </div>
+        </div>
+    );
+}

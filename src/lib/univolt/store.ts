@@ -9,6 +9,8 @@ type UnivoltState = {
   addPatient: (input: { name: string; age: number; sex: Sex; village: string }) => Patient;
   addVitalsScan: (patientId: string, result: PpgResult, simulated: boolean) => void;
   addCoughScreening: (patientId: string, result: CoughResult) => void;
+  /** Mark all 'local' scan and cough records as 'synced' (simulated mesh sync). */
+  syncAllRecords: () => void;
 };
 
 function touchVisit(db: UnivoltDb, patientId: string, at: number): UnivoltDb {
@@ -79,6 +81,20 @@ export const useUnivolt = create<UnivoltState>((set, get) => ({
     };
     const db = touchVisit(get().db, patientId, at);
     const next = { ...db, coughs: [...db.coughs, row] };
+    saveDb(next);
+    set({ db: next });
+  },
+  syncAllRecords: () => {
+    const db = get().db;
+    const next: UnivoltDb = {
+      ...db,
+      scans: db.scans.map((s) =>
+        s.syncStatus === "local" ? { ...s, syncStatus: "synced" as const } : s,
+      ),
+      coughs: db.coughs.map((c) =>
+        c.syncStatus === "local" ? { ...c, syncStatus: "synced" as const } : c,
+      ),
+    };
     saveDb(next);
     set({ db: next });
   },

@@ -1,19 +1,25 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { formatDistanceToNow } from "date-fns";
-import { Plus, Search, X } from "lucide-react";
+import { CloudUpload, Loader2, Plus, Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AppFrame, AppHeader } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { latestCough, latestScan, useUnivolt } from "@/lib/univolt/store";
-import type { Patient } from "@/lib/univolt/types";
+import { evaluateTriage } from "@/lib/triage";
+import type { Patient, VitalsScan } from "@/lib/univolt/types";
 
 export const Route = createFileRoute("/")({ component: HomeScreen });
 
+// Triage levels that require a follow-up warning badge.
+const URGENT_TRIAGE_LEVELS = new Set(["hypoxia", "bradycardia", "tachycardia", "tachypnea"]);
+
 function HomeScreen() {
   const db = useUnivolt((s) => s.db);
+  const syncAllRecords = useUnivolt((s) => s.syncAllRecords);
   const [searchQuery, setSearchQuery] = useState("");
+  const [syncState, setSyncState] = useState<"idle" | "syncing" | "done">("idle");
 
   const filtered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -23,6 +29,19 @@ function HomeScreen() {
       (p) => p.name.toLowerCase().includes(q) || p.caseId.toLowerCase().includes(q),
     );
   }, [db.patients, searchQuery]);
+
+  const pendingCount = db.scans.filter((s) => s.syncStatus === "local").length
+    + db.coughs.filter((c) => c.syncStatus === "local").length;
+
+  function handleSync() {
+    if (syncState === "syncing") return;
+    setSyncState("syncing");
+    window.setTimeout(() => {
+      syncAllRecords();
+      setSyncState("done");
+      window.setTimeout(() => setSyncState("idle"), 3000);
+    }, 2000);
+  }
 
   return (
     <AppFrame>
@@ -51,23 +70,49 @@ function HomeScreen() {
           ) : null}
         </div>
 
-        <div className="mt-4 flex items-center justify-between">
+        <div className="mt-4 flex items-center justify-between gap-2 flex-wrap">
           <h1 className="font-display text-2xl font-semibold tracking-[-0.03em] text-ink">
             Field roster
           </h1>
-          <Button asChild size="sm">
-            <Link to="/register">
-              <Plus className="size-4" />
-              Register
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* ── Feature 1: Sync to Clinic Node ── */}
+            <Button
+              id="btn-sync-clinic"
+              size="sm"
+              variant={syncState === "done" ? "outline" : "outline"}
+              onClick={handleSync}
+              disabled={syncState === "syncing" || pendingCount === 0}
+              className={`gap-1.5 transition-colors ${
+                syncState === "done"
+                  ? "border-pine/50 text-pine-fg"
+                  : "border-line text-muted hover:text-ink"
+              }`}
+            >
+              {syncState === "syncing" ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <CloudUpload className="size-3.5" />
+              )}
+              {syncState === "syncing"
+                ? "Searching for clinic node…"
+                : syncState === "done"
+                ? "✓ Records synced"
+                : `Sync to Clinic Node${pendingCount > 0 ? ` (${pendingCount})` : ""}`}
+            </Button>
+            <Button asChild size="sm">
+              <Link to="/register">
+                <Plus className="size-4" />
+                Register
+              </Link>
+            </Button>
+          </div>
         </div>
 
         <ul className="mt-3 flex flex-col gap-2.5">
           {filtered.length === 0 ? (
             <li className="rounded-[20px] border border-dashed border-line bg-paper px-4 py-10 text-center text-sm text-muted">
               {searchQuery
-                ? `No patients match “${searchQuery}”.`
+                ? `No patients match "${searchQuery}".`
                 : "Roster is empty. Register a patient to begin."}
             </li>
           ) : (
@@ -79,11 +124,27 @@ function HomeScreen() {
   );
 }
 
+// ── Feature 2: Triage risk flag helper ──────────────────────────────────────
+function scanNeedsFollowUp(scan: VitalsScan | null): boolean {
+  if (!scan) return false;
+  const triage = evaluateTriage({
+    bpm: scan.heartRate,
+    hrv: scan.hrvRmssd,
+    spo2: scan.spo2Estimate,
+    rr: scan.respiratoryRate,
+  });
+  return URGENT_TRIAGE_LEVELS.has(triage.level);
+}
+
 function PatientRow({ patient }: { patient: Patient }) {
   const db = useUnivolt((s) => s.db);
   const scan = latestScan(db, patient.id);
   const cough = latestCough(db, patient.id);
-  const followUp = cough?.classification !== "Normal" && cough != null;
+
+  const coughFollowUp = cough?.classification !== "Normal" && cough != null;
+  // Feature 2: flag if latest vitals triage is a concerning level
+  const vitalsFollowUp = scanNeedsFollowUp(scan);
+  const needsFollowUp = coughFollowUp || vitalsFollowUp;
 
   return (
     <li>
@@ -93,14 +154,33 @@ function PatientRow({ patient }: { patient: Patient }) {
         className="block rounded-[20px] border border-line bg-paper p-4 no-underline transition-colors hover:border-pine/30"
       >
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-[0.98rem] font-semibold text-ink">{patient.name}</p>
-            <p className="mt-0.5 text-sm text-muted">
-              {patient.village} · {patient.age}
-              {patient.sex}
-            </p>
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* ── Feature 2: red warning icon + badge ── */}
+            {needsFollowUp && (
+              <span
+                aria-label="Follow-up required"
+                className="text-base leading-none"
+                title="Vitals indicate follow-up required"
+              >
+                ⚠️
+              </span>
+            )}
+            <div>
+              <p className="text-[0.98rem] font-semibold text-ink">{patient.name}</p>
+              <p className="mt-0.5 text-sm text-muted">
+                {patient.village} · {patient.age}
+                {patient.sex}
+              </p>
+            </div>
           </div>
-          <Badge variant="muted">{patient.caseId}</Badge>
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            <Badge variant="muted">{patient.caseId}</Badge>
+            {needsFollowUp && (
+              <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-semibold text-red-400 border border-red-500/30">
+                Follow-up Required
+              </span>
+            )}
+          </div>
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-muted">
           <span>
@@ -108,13 +188,13 @@ function PatientRow({ patient }: { patient: Patient }) {
           </span>
           {scan ? (
             <span className="font-medium tabular-nums text-ink">
-              HR {scan.heartRate} · RR {scan.respiratoryRate} · SpO2 {scan.spo2Estimate}%
+              ❤️ {scan.heartRate} · 🫁 {scan.respiratoryRate} · 🩸 {scan.spo2Estimate}%
             </span>
           ) : (
             <span>No vitals yet</span>
           )}
         </div>
-        {followUp ? (
+        {coughFollowUp ? (
           <p className="mt-2 text-[12px] font-medium text-warn">Cough screen flagged for follow-up</p>
         ) : null}
       </Link>

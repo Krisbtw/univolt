@@ -4,7 +4,7 @@ import type { Locale } from "./translations";
 export interface ScanRecord {
     id: string;
     timestamp: number;
-    mode: "live" | "demo";
+    mode: "live" | "demo" | "manual";
     bpm: number | null;
     hrv: number | null;
     spo2: number | null;
@@ -69,7 +69,7 @@ export function loadScans(): ScanRecord[] {
             if (!isRecord(item)) continue;
             const id = typeof item.id === "string" ? item.id : null;
             const timestamp = numOrNull(item.timestamp);
-            const mode = item.mode === "live" || item.mode === "demo" ? item.mode : null;
+            const mode = item.mode === "live" || item.mode === "demo" || item.mode === "manual" ? item.mode : null;
             const locale = item.locale === "en" || item.locale === "hi" ? item.locale : null;
             const rawLevel: unknown = item.triageLevel;
             const triageLevel =

@@ -10,6 +10,7 @@ const PRECACHE_URLS = [
   "/mediapipe/wasm/vision_wasm_nosimd_internal.js",
   "/mediapipe/wasm/vision_wasm_nosimd_internal.wasm",
   "/models/blaze_face_short_range.tflite",
+  "/models/gesture_recognizer.task",
 ];
 
 // ── Install: pre-cache critical assets ──────────────────────────────────────

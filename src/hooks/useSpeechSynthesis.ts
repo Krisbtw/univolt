@@ -8,20 +8,74 @@ export type SpeechSynthesisState = {
   supported: boolean;
   /** True if at least one Hindi ("hi*") voice is installed on this device. */
   hindiAvailable: boolean;
+  /** Voices relevant to the current locale (hi first, then en-IN, then any en). */
+  voices: SpeechSynthesisVoice[];
+  /** The voice that will actually be used (manual pick, else best automatic match). */
+  voice: SpeechSynthesisVoice | null;
+  /** voiceURI of the manually picked voice, or null while on automatic. */
+  selectedVoiceUri: string | null;
+  /** Pick a voice by voiceURI; pass null to go back to automatic selection. */
+  setSelectedVoiceUri: (voiceUri: string | null) => void;
   /** Speak `text` using the best available voice for `locale`. Cancels any speech in progress. Fully offline — never calls a network API. */
   speak: (text: string) => void;
   /** Stop any speech in progress. */
   stop: () => void;
 };
 
+// ── Shared voice preference ──────────────────────────────────────────────────
+// The picker lives in one place but every speaker button must honour it, so the
+// preference is module-level (with subscribers) instead of per-component state.
+
+const STORAGE_KEY = "univolt.tts.voiceUri";
+let preferredVoiceUri: string | null = null;
+const listeners = new Set<(value: string | null) => void>();
+
+function readStoredVoiceUri(): string | null {
+  if (typeof localStorage === "undefined") return null;
+  try {
+    return localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function setPreferredVoiceUri(value: string | null) {
+  preferredVoiceUri = value;
+  try {
+    if (value === null) localStorage.removeItem(STORAGE_KEY);
+    else localStorage.setItem(STORAGE_KEY, value);
+  } catch {
+    // storage unavailable (private mode) — keep the in-memory preference only
+  }
+  for (const listener of listeners) listener(value);
+}
+
+/** Voices worth offering for `locale`: Hindi first, then en-IN, then other English. */
+export function relevantVoices(
+  voices: SpeechSynthesisVoice[],
+  locale: Locale,
+): SpeechSynthesisVoice[] {
+  const lang = (v: SpeechSynthesisVoice) => v.lang.toLowerCase();
+  const hindi = voices.filter((v) => lang(v).startsWith("hi"));
+  const enIN = voices.filter((v) => lang(v).startsWith("en-in"));
+  const enOther = voices.filter((v) => lang(v).startsWith("en") && !lang(v).startsWith("en-in"));
+  return locale === "hi" ? [...hindi, ...enIN, ...enOther] : [...enIN, ...enOther, ...hindi];
+}
+
 function pickVoice(
   voices: SpeechSynthesisVoice[],
   locale: Locale,
+  manualUri: string | null,
 ): { voice: SpeechSynthesisVoice | null; hindiAvailable: boolean } {
   const hindi = voices.filter((v) => v.lang.toLowerCase().startsWith("hi"));
   const enIN = voices.filter((v) => v.lang.toLowerCase().startsWith("en-in"));
   const enAny = voices.filter((v) => v.lang.toLowerCase().startsWith("en"));
   const hindiAvailable = hindi.length > 0;
+
+  if (manualUri) {
+    const manual = voices.find((v) => v.voiceURI === manualUri);
+    if (manual) return { voice: manual, hindiAvailable };
+  }
 
   if (locale === "hi" && hindiAvailable) {
     return { voice: hindi[0] ?? null, hindiAvailable: true };
@@ -42,8 +96,26 @@ export function useSpeechSynthesis(locale: Locale): SpeechSynthesisState {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>(() =>
     supported ? window.speechSynthesis.getVoices() : [],
   );
+  const [manualUri, setManualUri] = useState<string | null>(preferredVoiceUri);
   const [speaking, setSpeaking] = useState(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  // Hydrate the stored preference on the client and stay in sync with other
+  // components that change it.
+  useEffect(() => {
+    if (preferredVoiceUri === null) {
+      const stored = readStoredVoiceUri();
+      if (stored) {
+        preferredVoiceUri = stored;
+        setManualUri(stored);
+      }
+    }
+    const listener = (value: string | null) => setManualUri(value);
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
+  }, []);
 
   useEffect(() => {
     if (!supported) return;
@@ -53,7 +125,7 @@ export function useSpeechSynthesis(locale: Locale): SpeechSynthesisState {
     return () => window.speechSynthesis.removeEventListener("voiceschanged", refresh);
   }, [supported]);
 
-  const { voice, hindiAvailable } = pickVoice(voices, locale);
+  const { voice, hindiAvailable } = pickVoice(voices, locale, manualUri);
 
   const stop = useCallback(() => {
     if (!supported) return;
@@ -86,5 +158,15 @@ export function useSpeechSynthesis(locale: Locale): SpeechSynthesisState {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return { speaking, supported, hindiAvailable, speak, stop };
+  return {
+    speaking,
+    supported,
+    hindiAvailable,
+    voices: relevantVoices(voices, locale),
+    voice,
+    selectedVoiceUri: manualUri,
+    setSelectedVoiceUri: setPreferredVoiceUri,
+    speak,
+    stop,
+  };
 }

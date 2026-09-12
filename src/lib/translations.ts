@@ -214,6 +214,31 @@ export interface Strings {
     commCaptionClear: string;
     commCaptionEmptyState: string;
     commPhrases: CommPhrase[];
+    commVoicePickerLabel: string;
+    commVoiceAutomatic: string;
+    commVoiceNoneInstalled: string;
+    // ── Gesture communication prototype (canned MediaPipe vocabulary) ──────
+    commModeGesture: string;
+    commModeGestureDesc: string;
+    commGestureOpen: string;
+    gestureTitle: string;
+    gestureVocabCount: string;
+    gestureRoadmapNote: string;
+    gestureLegendTitle: string;
+    gestureStart: string;
+    gestureStop: string;
+    gestureLoading: string;
+    gestureUnavailable: string;
+    gestureCameraBlocked: string;
+    gestureWaiting: string;
+    gestureRecognizedLabel: string;
+    gestureHistoryLabel: string;
+    gestureYes: string;
+    gestureNo: string;
+    gestureWater: string;
+    gestureHelp: string;
+    gesturePainLabel: string;
+    gesturePainSentence: string;
 }
 
 const en: Strings = {
@@ -439,7 +464,7 @@ const en: Strings = {
         "Tap the speaker icon on any guidance or instruction card to hear it read aloud, any time.",
     commPhraseBoardTitle: "Tap to speak",
     commPhraseBoardSpokenLabel: "Patient is saying:",
-    commPhraseBoardNote: "Full gesture-based communication support is planned for a future update.",
+    commPhraseBoardNote: "Full sign-language recognition is on the roadmap.",
     commPainLabel: "Pain level (0–10)",
     commPainSentence: "Pain level {level}",
     commCaptionTitle: "Live captioning",
@@ -473,6 +498,33 @@ const en: Strings = {
         { id: "bleeding", icon: "🩸", text: "Bleeding" },
         { id: "help", icon: "⚠️", text: "Help me" },
     ],
+    commVoicePickerLabel: "Voice",
+    commVoiceAutomatic: "Automatic",
+    commVoiceNoneInstalled: "No speech voices are installed on this device.",
+    // Gesture communication prototype
+    commModeGesture: "Gesture prototype",
+    commModeGestureDesc:
+        "Camera reads four fixed hand gestures and speaks the matching phrase. A limited prototype, not sign-language translation.",
+    commGestureOpen: "Open gesture screen",
+    gestureTitle: "Gesture communication — prototype",
+    gestureVocabCount: "Fixed vocabulary: 4 gestures",
+    gestureRoadmapNote:
+        "Limited gesture vocabulary — not full sign-language recognition. Full ISL recognition requires a trained sign-language model (roadmap).",
+    gestureLegendTitle: "Gesture legend",
+    gestureStart: "Start camera",
+    gestureStop: "Stop camera",
+    gestureLoading: "Loading gesture model…",
+    gestureUnavailable: "Gesture recognition is unavailable on this device.",
+    gestureCameraBlocked: "Camera access is blocked. Allow the camera to use gesture communication.",
+    gestureWaiting: "Hold a gesture steady for half a second…",
+    gestureRecognizedLabel: "Patient is saying:",
+    gestureHistoryLabel: "Recent",
+    gestureYes: "Yes",
+    gestureNo: "No",
+    gestureWater: "I need water",
+    gestureHelp: "Please help me",
+    gesturePainLabel: "Show 1–5 fingers for a pain level",
+    gesturePainSentence: "Pain level {level}",
 };
 
 const hi: Strings = {
@@ -698,7 +750,7 @@ const hi: Strings = {
         "किसी भी मार्गदर्शन या निर्देश कार्ड पर स्पीकर आइकन टैप करके, कभी भी उसे सुनें।",
     commPhraseBoardTitle: "बोलने के लिए टैप करें",
     commPhraseBoardSpokenLabel: "मरीज़ कह रहा है:",
-    commPhraseBoardNote: "इशारों पर आधारित पूर्ण संचार सहायता भविष्य के अपडेट में जोड़ी जाएगी।",
+    commPhraseBoardNote: "पूर्ण सांकेतिक-भाषा पहचान रोडमैप में है।",
     commPainLabel: "दर्द का स्तर (0–10)",
     commPainSentence: "दर्द का स्तर {level}",
     commCaptionTitle: "लाइव कैप्शनिंग",
@@ -732,6 +784,33 @@ const hi: Strings = {
         { id: "bleeding", icon: "🩸", text: "खून बह रहा है" },
         { id: "help", icon: "⚠️", text: "मदद करो" },
     ],
+    commVoicePickerLabel: "आवाज़",
+    commVoiceAutomatic: "स्वचालित",
+    commVoiceNoneInstalled: "इस डिवाइस में कोई बोलने वाली आवाज़ इंस्टॉल नहीं है।",
+    // Gesture communication prototype
+    commModeGesture: "इशारा प्रोटोटाइप",
+    commModeGestureDesc:
+        "कैमरा चार निश्चित हाथ के इशारे पहचानता है और संबंधित वाक्य बोलता है। यह सीमित प्रोटोटाइप है, सांकेतिक-भाषा अनुवाद नहीं।",
+    commGestureOpen: "इशारा स्क्रीन खोलें",
+    gestureTitle: "इशारा संचार — प्रोटोटाइप",
+    gestureVocabCount: "निश्चित शब्दावली: 4 इशारे",
+    gestureRoadmapNote:
+        "सीमित इशारा शब्दावली — पूर्ण सांकेतिक-भाषा पहचान नहीं। पूर्ण ISL पहचान के लिए प्रशिक्षित सांकेतिक-भाषा मॉडल आवश्यक है (रोडमैप)।",
+    gestureLegendTitle: "इशारों की सूची",
+    gestureStart: "कैमरा चालू करें",
+    gestureStop: "कैमरा बंद करें",
+    gestureLoading: "इशारा मॉडल लोड हो रहा है…",
+    gestureUnavailable: "इस डिवाइस पर इशारा पहचान उपलब्ध नहीं है।",
+    gestureCameraBlocked: "कैमरा अनुमति बंद है। इशारा संचार के लिए कैमरा चालू करें।",
+    gestureWaiting: "आधे सेकंड तक इशारा स्थिर रखें…",
+    gestureRecognizedLabel: "मरीज़ कह रहा है:",
+    gestureHistoryLabel: "हाल के",
+    gestureYes: "हाँ",
+    gestureNo: "नहीं",
+    gestureWater: "मुझे पानी चाहिए",
+    gestureHelp: "कृपया मेरी मदद करें",
+    gesturePainLabel: "दर्द का स्तर बताने के लिए 1–5 उँगलियाँ दिखाएँ",
+    gesturePainSentence: "दर्द का स्तर {level}",
 };
 
 const STRINGS: Record<Locale, Strings> = { en, hi };

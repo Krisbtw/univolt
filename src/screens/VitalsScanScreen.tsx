@@ -1,3 +1,4 @@
+import { SpeakerButton } from "@/components/communication/speaker-button";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { SCAN_DURATION_MS, useRppgScan, type Status } from "../hooks/useRppgScan";
 import { evaluateTriage, type TriageResult } from "../lib/triage";
@@ -362,6 +363,13 @@ function GuidanceCard({ t, triage, locale, onSetLocale }: GuidanceCardProps) {
             <p style={guidanceIntroStyle}>{t.guidanceIntro}</p>
             <h4 style={branchTitleStyle}>{branch.title}</h4>
             <p style={branchBodyStyle}>{branch.body}</p>
+            {/* Read aloud (Mode A) — offline TTS, only on tap. */}
+            <SpeakerButton
+                text={`${branch.title}. ${branch.body}`}
+                locale={locale}
+                t={t}
+                className="mt-2"
+            />
             {triage.referral && (
                 <p style={referralStyle}>
                     {triage.urgent ? (

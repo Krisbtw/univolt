@@ -1,3 +1,5 @@
+import { Link } from "@tanstack/react-router";
+import { Hand } from "lucide-react";
 import { useState } from "react";
 import type { Patient } from "@/lib/univolt/types";
 import { communicationProfile, useUnivolt } from "@/lib/univolt/store";
@@ -5,8 +7,9 @@ import { getStrings, type Locale, type Strings } from "@/lib/translations";
 import { SpeakerButton } from "./speaker-button";
 import { PhraseBoard } from "./phrase-board";
 import { LiveCaptioning } from "./live-captioning";
+import { VoicePicker } from "./voice-picker";
 
-type Mode = "read" | "phrase" | "caption";
+type Mode = "read" | "phrase" | "caption" | "gesture";
 
 /**
  * "Communication Assistance" — the accessibility-layer entry point on the
@@ -84,6 +87,7 @@ export function CommunicationAssistanceSection({
         <ModeTab active={mode === "read"} onClick={() => setMode("read")} label={t.commModeReadAloud} />
         <ModeTab active={mode === "phrase"} onClick={() => setMode("phrase")} label={t.commModePhraseBoard} />
         <ModeTab active={mode === "caption"} onClick={() => setMode("caption")} label={t.commModeCaptioning} />
+        <ModeTab active={mode === "gesture"} onClick={() => setMode("gesture")} label={t.commModeGesture} />
       </div>
 
       <div className="mt-4">
@@ -93,6 +97,9 @@ export function CommunicationAssistanceSection({
             <div className="mt-3 flex items-start justify-between gap-3 rounded-[16px] border border-line bg-surface p-3">
               <p className="text-sm leading-relaxed text-ink">{t.commReadAloudDemoText}</p>
               <SpeakerButton text={t.commReadAloudDemoText} locale={locale} t={t} />
+            </div>
+            <div className="mt-3">
+              <VoicePicker locale={locale} t={t} />
             </div>
           </div>
         ) : null}
@@ -112,6 +119,26 @@ export function CommunicationAssistanceSection({
             <div className="mt-3">
               <LiveCaptioning locale={locale} t={t} />
             </div>
+          </div>
+        ) : null}
+
+        {mode === "gesture" ? (
+          <div>
+            <p className="text-[12px] leading-relaxed text-muted">{t.commModeGestureDesc}</p>
+            <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-muted">
+              {t.gestureVocabCount}
+            </p>
+            <p className="mt-2 rounded-[12px] border border-amber-400/30 bg-amber-400/8 px-3 py-2 text-[12px] leading-relaxed text-amber-600">
+              {t.gestureRoadmapNote}
+            </p>
+            <Link
+              to="/patient/$id/gesture"
+              params={{ id: patient.id }}
+              className="mt-3 inline-flex items-center gap-2 rounded-[12px] bg-pine px-4 py-3 text-sm font-semibold text-paper no-underline"
+            >
+              <Hand className="size-4" />
+              {t.commGestureOpen}
+            </Link>
           </div>
         ) : null}
       </div>

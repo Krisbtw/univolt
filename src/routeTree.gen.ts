@@ -20,6 +20,7 @@ import { Route as EmergencyIdRouteImport } from './routes/emergency.$id'
 import { Route as PatientIdRouteImport } from './routes/patient.$id'
 import { Route as PatientIdIndexRouteImport } from './routes/patient.$id.index'
 import { Route as PatientIdCoughRouteImport } from './routes/patient.$id.cough'
+import { Route as PatientIdGestureRouteImport } from './routes/patient.$id.gesture'
 import { Route as PatientIdScanRouteImport } from './routes/patient.$id.scan'
 
 const IndexRoute = IndexRouteImport.update({
@@ -77,6 +78,11 @@ const PatientIdCoughRoute = PatientIdCoughRouteImport.update({
   path: '/cough',
   getParentRoute: () => PatientIdRoute,
 } as any)
+const PatientIdGestureRoute = PatientIdGestureRouteImport.update({
+  id: '/gesture',
+  path: '/gesture',
+  getParentRoute: () => PatientIdRoute,
+} as any)
 const PatientIdScanRoute = PatientIdScanRouteImport.update({
   id: '/scan',
   path: '/scan',
@@ -94,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/emergency/$id': typeof EmergencyIdRoute
   '/patient/$id': typeof PatientIdRouteWithChildren
   '/patient/$id/cough': typeof PatientIdCoughRoute
+  '/patient/$id/gesture': typeof PatientIdGestureRoute
   '/patient/$id/scan': typeof PatientIdScanRoute
   '/patient/$id/': typeof PatientIdIndexRoute
 }
@@ -107,6 +114,7 @@ export interface FileRoutesByTo {
   '/scan': typeof ScanRoute
   '/emergency/$id': typeof EmergencyIdRoute
   '/patient/$id/cough': typeof PatientIdCoughRoute
+  '/patient/$id/gesture': typeof PatientIdGestureRoute
   '/patient/$id/scan': typeof PatientIdScanRoute
   '/patient/$id': typeof PatientIdIndexRoute
 }
@@ -122,6 +130,7 @@ export interface FileRoutesById {
   '/emergency/$id': typeof EmergencyIdRoute
   '/patient/$id': typeof PatientIdRouteWithChildren
   '/patient/$id/cough': typeof PatientIdCoughRoute
+  '/patient/$id/gesture': typeof PatientIdGestureRoute
   '/patient/$id/scan': typeof PatientIdScanRoute
   '/patient/$id/': typeof PatientIdIndexRoute
 }
@@ -138,6 +147,7 @@ export interface FileRouteTypes {
     | '/emergency/$id'
     | '/patient/$id'
     | '/patient/$id/cough'
+    | '/patient/$id/gesture'
     | '/patient/$id/scan'
     | '/patient/$id/'
   fileRoutesByTo: FileRoutesByTo
@@ -151,6 +161,7 @@ export interface FileRouteTypes {
     | '/scan'
     | '/emergency/$id'
     | '/patient/$id/cough'
+    | '/patient/$id/gesture'
     | '/patient/$id/scan'
     | '/patient/$id'
   id:
@@ -165,6 +176,7 @@ export interface FileRouteTypes {
     | '/emergency/$id'
     | '/patient/$id'
     | '/patient/$id/cough'
+    | '/patient/$id/gesture'
     | '/patient/$id/scan'
     | '/patient/$id/'
   fileRoutesById: FileRoutesById
@@ -260,6 +272,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PatientIdCoughRouteImport
       parentRoute: typeof PatientIdRoute
     }
+    '/patient/$id/gesture': {
+      id: '/patient/$id/gesture'
+      path: '/gesture'
+      fullPath: '/patient/$id/gesture'
+      preLoaderRoute: typeof PatientIdGestureRouteImport
+      parentRoute: typeof PatientIdRoute
+    }
     '/patient/$id/scan': {
       id: '/patient/$id/scan'
       path: '/scan'
@@ -272,12 +291,14 @@ declare module '@tanstack/react-router' {
 
 interface PatientIdRouteChildren {
   PatientIdCoughRoute: typeof PatientIdCoughRoute
+  PatientIdGestureRoute: typeof PatientIdGestureRoute
   PatientIdScanRoute: typeof PatientIdScanRoute
   PatientIdIndexRoute: typeof PatientIdIndexRoute
 }
 
 const PatientIdRouteChildren: PatientIdRouteChildren = {
   PatientIdCoughRoute: PatientIdCoughRoute,
+  PatientIdGestureRoute: PatientIdGestureRoute,
   PatientIdScanRoute: PatientIdScanRoute,
   PatientIdIndexRoute: PatientIdIndexRoute,
 }

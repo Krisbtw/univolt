@@ -12,7 +12,10 @@ import {
   generateMockCoughResult,
   recordCoughAudio,
 } from "@/lib/univolt/coughProcessor";
+import { NonSpeakingNote } from "@/components/communication/non-speaking-note";
 import { selectPatient, useUnivolt } from "@/lib/univolt/store";
+import { getStrings } from "@/lib/translations";
+import { loadLocale } from "@/lib/vitalsDatabase";
 import type { CoughResult } from "@/lib/univolt/types";
 
 export const Route = createFileRoute("/patient/$id/cough")({ component: CoughScreen });
@@ -146,6 +149,8 @@ export function CoughScreen() {
     <AppFrame>
       <AppHeader back={{ to: "/patient/$id", params: { id: patient.id } }} title="Cough screening" subtitle={patient.name} />
       <main className="flex flex-1 flex-col gap-4 px-4 pb-10 pt-3">
+        {/* Note only — never blocks the test. */}
+        <NonSpeakingNote patient={patient} t={getStrings(loadLocale() ?? "en")} />
         <div className="rounded-[24px] border border-line bg-paper p-4">
           <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted">
             Prototype heuristic — not a diagnostic classifier

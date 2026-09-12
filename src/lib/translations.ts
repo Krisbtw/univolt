@@ -105,6 +105,75 @@ export interface Strings {
     referralScanUnsupported: string;
     referralNoData: string;
     referralHandoffTitle: string;
+    // ── Trend & patient detail ────────────────────────────────────────────────
+    trendTitle: string;
+    trend7Day: string;
+    trend30Day: string;
+    trendHr: string;
+    trendRr: string;
+    trendSpo2: string;
+    trendNeedTwoScans: string;
+    spo2EmptyState: string;
+    spo2ManualLabel: string;
+    spo2ManualPlaceholder: string;
+    spo2ManualSave: string;
+    spo2ManualPoint: string;
+    // ── Delta banner ───────────────────────────────────────────────────────────────────
+    deltaHrUp: string;
+    deltaHrDown: string;
+    deltaRrUp: string;
+    deltaRrDown: string;
+    deltaSpo2Up: string;
+    deltaSpo2Down: string;
+    deltaAllStable: string;
+    deltaInRange: string;
+    deltaOutOfRange: string;
+    // ── Visit summary (T1) ──────────────────────────────────────────────────────────────────
+    visitSummaryTitle: string;
+    visitSummaryGenerate: string;
+    visitSummaryFirstVisit: string;
+    visitSummaryCurrent: string;
+    visitSummaryPrevious: string;
+    visitSummaryChange: string;
+    visitSummaryFollowUp: string;
+    visitSummaryCopy: string;
+    visitSummaryCopied: string;
+    visitSummaryPrint: string;
+    visitSummaryShare: string;
+    visitSummaryDisclaimer: string;
+    vsFollowupSelfCare: string;
+    vsFollowupPhc: string;
+    vsFollowupUrgent: string;
+    vsFollowupDefault: string;
+    vsHrUp: string;
+    vsHrDown: string;
+    vsRrUp: string;
+    vsRrDown: string;
+    vsSpo2Up: string;
+    vsSpo2Down: string;
+    vsAllStable: string;
+    vsInRange: string;
+    vsOutOfRange: string;
+    // ── Emergency card (T2) ─────────────────────────────────────────────────────────────────
+    emgCardTitle: string;
+    emgHeading: string;
+    emgBloodGroup: string;
+    emgAllergies: string;
+    emgConditions: string;
+    emgMedication: string;
+    emgLastVitals: string;
+    emgLastUpdated: string;
+    emgPrint: string;
+    emgDownload: string;
+    emgScanMode: string;
+    emgScanInstructions: string;
+    emgScanUnsupported: string;
+    emgViewTitle: string;
+    emgDisclaimer: string;
+    emgEditFields: string;
+    emgSave: string;
+    emgNone: string;
+    emgUnknown: string;
 }
 
 const en: Strings = {
@@ -239,6 +308,75 @@ const en: Strings = {
     referralScanUnsupported: "QR scanning is not supported in this browser. Use your camera app to scan.",
     referralNoData: "Complete at least one test before generating a referral.",
     referralHandoffTitle: "Patient Handoff Card",
+    // Trend & patient detail
+    trendTitle: "Vitals Trend",
+    trend7Day: "7 days",
+    trend30Day: "30 days",
+    trendHr: "Heart Rate",
+    trendRr: "Respiratory Rate",
+    trendSpo2: "SpO₂ (manual only)",
+    trendNeedTwoScans: "Run another scan to start a trend.",
+    spo2EmptyState: "SpO₂ not measured — enter a reading if you have a pulse oximeter.",
+    spo2ManualLabel: "Enter pulse-oximeter SpO₂",
+    spo2ManualPlaceholder: "e.g. 98",
+    spo2ManualSave: "Save reading",
+    spo2ManualPoint: "Manual",
+    // Delta banner
+    deltaHrUp: "Heart rate up {delta} bpm; {range}.",
+    deltaHrDown: "Heart rate down {delta} bpm; {range}.",
+    deltaRrUp: "Respiratory rate up {delta} /min; {range}.",
+    deltaRrDown: "Respiratory rate down {delta} /min; {range}.",
+    deltaSpo2Up: "SpO₂ improved {delta}%; {range}.",
+    deltaSpo2Down: "SpO₂ decreased {delta}%; {range}.",
+    deltaAllStable: "Vitals remain within expected range.",
+    deltaInRange: "still within normal range",
+    deltaOutOfRange: "outside normal range — monitor closely",
+    // Visit summary
+    visitSummaryTitle: "Clinical Visit Summary",
+    visitSummaryGenerate: "Generate Visit Summary",
+    visitSummaryFirstVisit: "First visit",
+    visitSummaryCurrent: "Current visit",
+    visitSummaryPrevious: "Previous visit",
+    visitSummaryChange: "Change",
+    visitSummaryFollowUp: "Follow-up",
+    visitSummaryCopy: "Copy",
+    visitSummaryCopied: "Copied!",
+    visitSummaryPrint: "Print",
+    visitSummaryShare: "Share",
+    visitSummaryDisclaimer: "Not a medical device. Clinical visit notes for screening only. Confirm findings with trained clinical staff.",
+    vsFollowupSelfCare: "Routine monitoring.",
+    vsFollowupPhc: "Follow-up at the nearest PHC today.",
+    vsFollowupUrgent: "Urgent referral advised.",
+    vsFollowupDefault: "Repeat the scan after rest.",
+    vsHrUp: "Heart rate increased {delta} bpm; {range}.",
+    vsHrDown: "Heart rate decreased {delta} bpm; {range}.",
+    vsRrUp: "Respiratory rate increased {delta} /min; {range}.",
+    vsRrDown: "Respiratory rate decreased {delta} /min; {range}.",
+    vsSpo2Up: "SpO₂ improved by {delta}%; {range}.",
+    vsSpo2Down: "SpO₂ decreased {delta}%; {range}.",
+    vsAllStable: "Vitals remain within expected range.",
+    vsInRange: "still within normal range",
+    vsOutOfRange: "outside normal range — monitor closely",
+    // Emergency card
+    emgCardTitle: "Emergency Card",
+    emgHeading: "⚠️ EMERGENCY INFORMATION",
+    emgBloodGroup: "Blood Group",
+    emgAllergies: "Allergies",
+    emgConditions: "Conditions",
+    emgMedication: "Current Medication",
+    emgLastVitals: "Latest Vitals",
+    emgLastUpdated: "Last updated",
+    emgPrint: "Print card",
+    emgDownload: "Download PNG",
+    emgScanMode: "Scan emergency QR",
+    emgScanInstructions: "Scan a printed emergency card QR to view patient information.",
+    emgScanUnsupported: "QR scanning not supported. Use your camera app.",
+    emgViewTitle: "Emergency Patient Info",
+    emgDisclaimer: "This QR contains no name or contact details. Anyone who scans it can view this information — that is intentional so emergency responders can access it without authentication.",
+    emgEditFields: "Edit emergency info",
+    emgSave: "Save",
+    emgNone: "None on file",
+    emgUnknown: "Unknown",
 };
 
 const hi: Strings = {
@@ -373,6 +511,75 @@ const hi: Strings = {
     referralScanUnsupported: "इस ब्राउज़र में QR स्कैन उपलब्ध नहीं है। कैमरा एप से स्कैन करें।",
     referralNoData: "रेफरल तैयार करने से पहले कम से कम एक जाँच पूरी करें।",
     referralHandoffTitle: "मरीज़ हैंडऑफ कार्ड",
+    // Trend & patient detail
+    trendTitle: "वाइटल ट्रेंड",
+    trend7Day: "7 दिन",
+    trend30Day: "30 दिन",
+    trendHr: "हृदय गति",
+    trendRr: "श्वसन दर",
+    trendSpo2: "SpO₂ (केवल क्रमांकित)",
+    trendNeedTwoScans: "ट्रेंड शुरू करने के लिए एक और स्कैन करें।",
+    spo2EmptyState: "SpO₂ नहीं मापा — यदि पास में पल्स ऑक्सीमीटर है तो रीडिंग दर्ज करें।",
+    spo2ManualLabel: "पल्स ऑक्सीमीटर SpO₂ दर्ज करें",
+    spo2ManualPlaceholder: "जैसे 98",
+    spo2ManualSave: "रीडिंग सेव करें",
+    spo2ManualPoint: "क्रमांकित",
+    // Delta banner
+    deltaHrUp: "हृदय गति {delta} bpm बढ़ी; {range}.",
+    deltaHrDown: "हृदय गति {delta} bpm घटी; {range}.",
+    deltaRrUp: "श्वसन दर {delta} /min बढ़ा; {range}.",
+    deltaRrDown: "श्वसन दर {delta} /min घटा; {range}.",
+    deltaSpo2Up: "SpO₂ {delta}% सुधरा; {range}.",
+    deltaSpo2Down: "SpO₂ {delta}% घटा; {range}.",
+    deltaAllStable: "वाइटल सामान्य सीमा में हैं।",
+    deltaInRange: "सामान्य सीमा में",
+    deltaOutOfRange: "सामान्य सीमा से बाहर",
+    // Visit summary
+    visitSummaryTitle: "नैदानिक भेंट सारांश",
+    visitSummaryGenerate: "भेंट सारांश तैयार करें",
+    visitSummaryFirstVisit: "पहली भेंट",
+    visitSummaryCurrent: "वर्तमान भेंट",
+    visitSummaryPrevious: "पिछली भेंट",
+    visitSummaryChange: "बदलाव",
+    visitSummaryFollowUp: "फॉलो-अप",
+    visitSummaryCopy: "कॉपी करें",
+    visitSummaryCopied: "कॉपी हो गई!",
+    visitSummaryPrint: "प्रिंट करें",
+    visitSummaryShare: "शेयर करें",
+    visitSummaryDisclaimer: "यह चिकित्सा उपकरण नहीं है। केवल स्क्रीनिंग के लिए।",
+    vsFollowupSelfCare: "नियमित निगरानी जारी रखें।",
+    vsFollowupPhc: "आज नजदीकी PHC जाएँ।",
+    vsFollowupUrgent: "तत्काल रेफरल आवश्यक।",
+    vsFollowupDefault: "आराम के बाद पुनः स्कैन करें।",
+    vsHrUp: "हृदय गति {delta} bpm बढ़ी; {range}.",
+    vsHrDown: "हृदय गति {delta} bpm घटी; {range}.",
+    vsRrUp: "श्वसन दर {delta} /min बढ़ा; {range}.",
+    vsRrDown: "श्वसन दर {delta} /min घटा; {range}.",
+    vsSpo2Up: "SpO₂ {delta}% सुधरा; {range}.",
+    vsSpo2Down: "SpO₂ {delta}% घटा; {range}.",
+    vsAllStable: "वाइटल सामान्य सीमा में हैं।",
+    vsInRange: "सामान्य सीमा में",
+    vsOutOfRange: "सामान्य सीमा से बाहर",
+    // Emergency card
+    emgCardTitle: "आपात कार्ड",
+    emgHeading: "⚠️ आपातकालीन जानकारी",
+    emgBloodGroup: "रक्त समूह",
+    emgAllergies: "एलर्जी",
+    emgConditions: "स्थितियाँ",
+    emgMedication: "वर्तमान दवाईयाँ",
+    emgLastVitals: "नवीनतम वाइटल",
+    emgLastUpdated: "अंतिम अपडेट",
+    emgPrint: "कार्ड प्रिंट करें",
+    emgDownload: "PNG डाउनलोड करें",
+    emgScanMode: "आपात QR स्कैन करें",
+    emgScanInstructions: "आपात कार्ड QR स्कैन करें।",
+    emgScanUnsupported: "QR स्कैन उपलब्ध नहीं। कैमरा एप से स्कैन करें।",
+    emgViewTitle: "आपात मरीज़ जानकारी",
+    emgDisclaimer: "इस QR में नाम या संपर्क जानकारी नहीं है। इसे स्कैन करने वाला कोई भी यह डेटा देख सकता है।",
+    emgEditFields: "आपात जानकारी संपादित करें",
+    emgSave: "सेव करें",
+    emgNone: "कोई नहीं",
+    emgUnknown: "अज्ञात",
 };
 
 const STRINGS: Record<Locale, Strings> = { en, hi };

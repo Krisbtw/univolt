@@ -129,6 +129,7 @@ function scan(
     durationSec: 12,
     simulated: true,
     syncStatus: "local",
+    source: "scan" as const,
   };
 }
 
@@ -166,6 +167,7 @@ function migrate(raw: unknown): UnivoltDb {
     hrvRmssd: s.hrvRmssd ?? 28,
     signalQuality: s.signalQuality ?? 80,
     syncStatus: s.syncStatus ?? "local",
+    source: s.source ?? "scan",
   }));
   const coughs = Array.isArray(db.coughs) ? db.coughs : [];
   return {

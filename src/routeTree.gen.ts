@@ -16,6 +16,7 @@ import { Route as FusionRouteImport } from './routes/fusion'
 import { Route as ReferralRouteImport } from './routes/referral'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ScanRouteImport } from './routes/scan'
+import { Route as EmergencyIdRouteImport } from './routes/emergency.$id'
 import { Route as PatientIdRouteImport } from './routes/patient.$id'
 import { Route as PatientIdIndexRouteImport } from './routes/patient.$id.index'
 import { Route as PatientIdCoughRouteImport } from './routes/patient.$id.cough'
@@ -56,6 +57,11 @@ const ScanRoute = ScanRouteImport.update({
   path: '/scan',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EmergencyIdRoute = EmergencyIdRouteImport.update({
+  id: '/emergency/$id',
+  path: '/emergency/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PatientIdRoute = PatientIdRouteImport.update({
   id: '/patient/$id',
   path: '/patient/$id',
@@ -85,6 +91,7 @@ export interface FileRoutesByFullPath {
   '/referral': typeof ReferralRoute
   '/register': typeof RegisterRoute
   '/scan': typeof ScanRoute
+  '/emergency/$id': typeof EmergencyIdRoute
   '/patient/$id': typeof PatientIdRouteWithChildren
   '/patient/$id/cough': typeof PatientIdCoughRoute
   '/patient/$id/scan': typeof PatientIdScanRoute
@@ -98,6 +105,7 @@ export interface FileRoutesByTo {
   '/referral': typeof ReferralRoute
   '/register': typeof RegisterRoute
   '/scan': typeof ScanRoute
+  '/emergency/$id': typeof EmergencyIdRoute
   '/patient/$id/cough': typeof PatientIdCoughRoute
   '/patient/$id/scan': typeof PatientIdScanRoute
   '/patient/$id': typeof PatientIdIndexRoute
@@ -111,6 +119,7 @@ export interface FileRoutesById {
   '/referral': typeof ReferralRoute
   '/register': typeof RegisterRoute
   '/scan': typeof ScanRoute
+  '/emergency/$id': typeof EmergencyIdRoute
   '/patient/$id': typeof PatientIdRouteWithChildren
   '/patient/$id/cough': typeof PatientIdCoughRoute
   '/patient/$id/scan': typeof PatientIdScanRoute
@@ -126,6 +135,7 @@ export interface FileRouteTypes {
     | '/referral'
     | '/register'
     | '/scan'
+    | '/emergency/$id'
     | '/patient/$id'
     | '/patient/$id/cough'
     | '/patient/$id/scan'
@@ -139,6 +149,7 @@ export interface FileRouteTypes {
     | '/referral'
     | '/register'
     | '/scan'
+    | '/emergency/$id'
     | '/patient/$id/cough'
     | '/patient/$id/scan'
     | '/patient/$id'
@@ -151,6 +162,7 @@ export interface FileRouteTypes {
     | '/referral'
     | '/register'
     | '/scan'
+    | '/emergency/$id'
     | '/patient/$id'
     | '/patient/$id/cough'
     | '/patient/$id/scan'
@@ -165,6 +177,7 @@ export interface RootRouteChildren {
   ReferralRoute: typeof ReferralRoute
   RegisterRoute: typeof RegisterRoute
   ScanRoute: typeof ScanRoute
+  EmergencyIdRoute: typeof EmergencyIdRoute
   PatientIdRoute: typeof PatientIdRouteWithChildren
 }
 
@@ -217,6 +230,13 @@ declare module '@tanstack/react-router' {
       path: '/scan'
       fullPath: '/scan'
       preLoaderRoute: typeof ScanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/emergency/$id': {
+      id: '/emergency/$id'
+      path: '/emergency/$id'
+      fullPath: '/emergency/$id'
+      preLoaderRoute: typeof EmergencyIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/patient/$id': {
@@ -274,6 +294,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReferralRoute: ReferralRoute,
   RegisterRoute: RegisterRoute,
   ScanRoute: ScanRoute,
+  EmergencyIdRoute: EmergencyIdRoute,
   PatientIdRoute: PatientIdRouteWithChildren,
 }
 export const routeTree = rootRouteImport

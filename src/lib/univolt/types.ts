@@ -1,5 +1,7 @@
 export type Sex = "F" | "M" | "X";
 
+export type BloodGroup = "A+" | "A-" | "B+" | "B-" | "AB+" | "AB-" | "O+" | "O-" | "unknown";
+
 export type SyncStatus = "local" | "queued" | "synced";
 
 export type CoughClassification =
@@ -15,6 +17,15 @@ export type Patient = {
   village: string;
   createdAt: number;
   lastVisitAt: number;
+  // ── Emergency card medical fields (all optional) ──────────────────────
+  /** Blood group, e.g. "O+". Stored but never transmitted with identifying data. */
+  bloodGroup?: BloodGroup;
+  /** Free-text allergies list. */
+  allergies?: string;
+  /** Chronic conditions, e.g. "Hypertension, Diabetes". */
+  conditions?: string;
+  /** Current medication, free text. */
+  currentMedication?: string;
 };
 
 export type VitalsScan = {
@@ -25,11 +36,20 @@ export type VitalsScan = {
   hrvRmssd: number;
   signalQuality: number;
   respiratoryRate: number;
+  /**
+   * SpO₂ estimate from the camera rPPG pipeline (simulated / unreliable).
+   * For the honest SpO₂ display we only show MANUAL readings.
+   */
   spo2Estimate: number;
   peakCount: number;
   durationSec: number;
   simulated: boolean;
   syncStatus: SyncStatus;
+  /**
+   * "scan"   = saved by the camera rPPG pipeline (default for existing records).
+   * "manual" = manually entered pulse-oximeter SpO₂ point.
+   */
+  source?: "scan" | "manual";
 };
 
 export type CoughScreening = {

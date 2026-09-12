@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { loadOrSeed, makeId, nextCaseId, newPatientInput, saveDb } from "./database";
-import type { CoughResult, Patient, PpgResult, Sex, UnivoltDb } from "./types";
+import type { BloodGroup, CoughResult, Patient, PpgResult, Sex, UnivoltDb } from "./types";
 
 type UnivoltState = {
   ready: boolean;
@@ -9,6 +9,15 @@ type UnivoltState = {
   addPatient: (input: { name: string; age: number; sex: Sex; village: string }) => Patient;
   addVitalsScan: (patientId: string, result: PpgResult, simulated: boolean) => void;
   addCoughScreening: (patientId: string, result: CoughResult) => void;
+  /** Add a manual pulse-oximeter SpO₂ reading for a patient. */
+  addManualSpo2: (patientId: string, spo2: number) => void;
+  /** Update optional emergency card medical fields for a patient. */
+  updatePatientMedical: (patientId: string, fields: {
+    bloodGroup?: BloodGroup;
+    allergies?: string;
+    conditions?: string;
+    currentMedication?: string;
+  }) => void;
   /** Mark all 'local' scan and cough records as 'synced' (simulated mesh sync). */
   syncAllRecords: () => void;
 };
@@ -59,6 +68,7 @@ export const useUnivolt = create<UnivoltState>((set, get) => ({
       durationSec: result.durationSec,
       simulated,
       syncStatus: "local" as const,
+      source: "scan" as const,
     };
     const db = touchVisit(get().db, patientId, at);
     const next = { ...db, scans: [...db.scans, row] };
@@ -84,6 +94,28 @@ export const useUnivolt = create<UnivoltState>((set, get) => ({
     saveDb(next);
     set({ db: next });
   },
+  addManualSpo2: (patientId, spo2) => {
+    const at = Date.now();
+    const row = {
+      id: makeId("m"),
+      patientId,
+      capturedAt: at,
+      heartRate: 0,
+      hrvRmssd: 0,
+      signalQuality: 0,
+      respiratoryRate: 0,
+      spo2Estimate: Math.round(spo2),
+      peakCount: 0,
+      durationSec: 0,
+      simulated: false,
+      syncStatus: "local" as const,
+      source: "manual" as const,
+    };
+    const db = touchVisit(get().db, patientId, at);
+    const next = { ...db, scans: [...db.scans, row] };
+    saveDb(next);
+    set({ db: next });
+  },
   syncAllRecords: () => {
     const db = get().db;
     const next: UnivoltDb = {
@@ -93,6 +125,17 @@ export const useUnivolt = create<UnivoltState>((set, get) => ({
       ),
       coughs: db.coughs.map((c) =>
         c.syncStatus === "local" ? { ...c, syncStatus: "synced" as const } : c,
+      ),
+    };
+    saveDb(next);
+    set({ db: next });
+  },
+  updatePatientMedical: (patientId, fields) => {
+    const db = get().db;
+    const next = {
+      ...db,
+      patients: db.patients.map((p) =>
+        p.id === patientId ? { ...p, ...fields } : p,
       ),
     };
     saveDb(next);

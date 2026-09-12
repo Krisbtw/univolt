@@ -251,15 +251,23 @@ export function useRppgScan({ videoRef, ppgCanvasRef }: UseRppgScanOptions): Use
         const seq = cameraSeqRef.current + 1;
         cameraSeqRef.current = seq;
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                audio: false,
-                video: {
-                    facingMode: "user",
-                    width: { ideal: 640 },
-                    height: { ideal: 480 },
-                    frameRate: { ideal: 30 },
-                },
-            });
+            let stream: MediaStream;
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    audio: false,
+                    video: {
+                        facingMode: "user",
+                        width: { ideal: 640 },
+                        height: { ideal: 480 },
+                        frameRate: { ideal: 30 },
+                    },
+                });
+            } catch {
+                // Some browsers reject an exact/ideal facingMode constraint outright
+                // (e.g. a single-camera desktop). Retry with a plain constraint —
+                // NEVER fall back to the rear/"environment" camera.
+                stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
+            }
             if (cameraSeqRef.current !== seq) {
                 stream.getTracks().forEach((track) => track.stop());
                 return "denied";

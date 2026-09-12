@@ -29,6 +29,8 @@ export interface RppgAnalysis extends VitalsMetrics {
     snrDb: number;
     quality: RppgQuality;
     confidence: number;
+    /** Time-domain beats detected in the analysis window (0 when rejected). */
+    peakCount: number;
 }
 
 // ---- tunables ----
@@ -320,14 +322,15 @@ export function liveWaveform(samples: RppgSample[], windowMs: number): number[] 
 export function analyzeRppg(samples: RppgSample[]): RppgAnalysis {
     const empty: VitalsMetrics = { bpm: null, hrv: null, spo2: null, rr: null };
     if (samples.length < MIN_SAMPLE_COUNT) {
-        return { ...empty, snrDb: 0, quality: "reject", confidence: 0 };
+        return { ...empty, snrDb: 0, quality: "reject", confidence: 0, peakCount: 0 };
     }
     const u = toUniformSeries(samples);
     if (u.fs < MIN_FS || u.r.length < MIN_SAMPLE_COUNT / 2) {
-        return { ...empty, snrDb: 0, quality: "reject", confidence: 0 };
+        return { ...empty, snrDb: 0, quality: "reject", confidence: 0, peakCount: 0 };
     }
     const chrom = chrominanceSignal(u.r, u.g, u.b);
-    if (chrom.length === 0) return { ...empty, snrDb: 0, quality: "reject", confidence: 0 };
+    if (chrom.length === 0)
+        return { ...empty, snrDb: 0, quality: "reject", confidence: 0, peakCount: 0 };
     const filtered = bandpassPulse(chrom, u.fs);
     // Trim the filter transient (~0.5 s).
     const settle = Math.min(Math.floor(u.fs * 0.5), Math.max(0, filtered.length - 12));
@@ -364,5 +367,6 @@ export function analyzeRppg(samples: RppgSample[]): RppgAnalysis {
         snrDb,
         quality,
         confidence,
+        peakCount: peaks.length,
     };
 }

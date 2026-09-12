@@ -26,6 +26,20 @@ export type Patient = {
   conditions?: string;
   /** Current medication, free text. */
   currentMedication?: string;
+  // ── Communication Assistance (accessibility layer) ─────────────────────
+  /** Can the patient speak? Undefined means true (existing records default to able). */
+  canSpeak?: boolean;
+  /** Can the patient hear? Undefined means true (existing records default to able). */
+  canHear?: boolean;
+  /** Can the patient read? Undefined means true (existing records default to able). */
+  canRead?: boolean;
+};
+
+/** Resolved communication profile with defaults applied (missing → able). */
+export type CommunicationProfile = {
+  canSpeak: boolean;
+  canHear: boolean;
+  canRead: boolean;
 };
 
 export type VitalsScan = {

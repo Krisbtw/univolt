@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { loadOrSeed, makeId, nextCaseId, newPatientInput, saveDb } from "./database";
-import type { BloodGroup, CoughResult, Patient, PpgResult, Sex, UnivoltDb } from "./types";
+import type { BloodGroup, CommunicationProfile, CoughResult, Patient, PpgResult, Sex, UnivoltDb } from "./types";
 
 type UnivoltState = {
   ready: boolean;
@@ -20,6 +20,8 @@ type UnivoltState = {
   }) => void;
   /** Mark all 'local' scan and cough records as 'synced' (simulated mesh sync). */
   syncAllRecords: () => void;
+  /** Update the Communication Assistance profile (canSpeak / canHear / canRead) for a patient. */
+  updateCommunicationProfile: (patientId: string, fields: Partial<CommunicationProfile>) => void;
 };
 
 function touchVisit(db: UnivoltDb, patientId: string, at: number): UnivoltDb {
@@ -141,7 +143,27 @@ export const useUnivolt = create<UnivoltState>((set, get) => ({
     saveDb(next);
     set({ db: next });
   },
+  updateCommunicationProfile: (patientId, fields) => {
+    const db = get().db;
+    const next = {
+      ...db,
+      patients: db.patients.map((p) =>
+        p.id === patientId ? { ...p, ...fields } : p,
+      ),
+    };
+    saveDb(next);
+    set({ db: next });
+  },
 }));
+
+/** Resolve a patient's Communication Assistance profile, defaulting missing fields to "able". */
+export function communicationProfile(patient: Patient): CommunicationProfile {
+  return {
+    canSpeak: patient.canSpeak ?? true,
+    canHear: patient.canHear ?? true,
+    canRead: patient.canRead ?? true,
+  };
+}
 
 export function selectPatient(db: UnivoltDb, id: string) {
   return db.patients.find((p) => p.id === id) ?? null;

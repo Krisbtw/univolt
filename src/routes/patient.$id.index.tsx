@@ -1,12 +1,14 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { format, formatDistanceToNow } from "date-fns";
 import { Activity, Mic, AlertTriangle } from "lucide-react";
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { AppFrame, AppHeader } from "@/components/app-shell";
 import { SavedLocalBadge } from "@/components/sync-indicator";
 import { HrChart, RrChart, Spo2Chart } from "@/components/trend-chart";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CommunicationAssistanceSection } from "@/components/communication/communication-assistance";
+import { SpeakerButton } from "@/components/communication/speaker-button";
 import {
   latestCough,
   selectCoughs,
@@ -16,6 +18,8 @@ import {
 } from "@/lib/univolt/store";
 import { generateVisitSummary } from "@/lib/visitSummary";
 import type { VisitSummary, SummaryLine } from "@/lib/visitSummary";
+import { getStrings, type Locale, type Strings } from "@/lib/translations";
+import { loadLocale, saveLocale } from "@/lib/vitalsDatabase";
 
 export const Route = createFileRoute("/patient/$id/")({ component: PatientProfileScreen });
 

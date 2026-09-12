@@ -11,6 +11,13 @@ export interface GuidanceStrings {
     referralLine: string;
     triage: Record<TriageLevel, BranchStrings>;
 }
+export interface CommPhrase {
+    id: string;
+    /** Emoji icon shown on the phrase-board tile. */
+    icon: string;
+    /** The phrase text, spoken aloud and shown in large type when tapped. */
+    text: string;
+}
 export interface Strings {
     appTitle: string;
     tagline: string;
@@ -174,6 +181,39 @@ export interface Strings {
     emgSave: string;
     emgNone: string;
     emgUnknown: string;
+    // ── Communication Assistance (accessibility layer) ─────────────────────────────────────
+    commSectionTitle: string;
+    commSectionSubtitle: string;
+    commProfileTitle: string;
+    commCanSpeakLabel: string;
+    commCanHearLabel: string;
+    commCanReadLabel: string;
+    commNonSpeakingNote: string;
+    commModeReadAloud: string;
+    commModeReadAloudDesc: string;
+    commModePhraseBoard: string;
+    commModePhraseBoardDesc: string;
+    commModeCaptioning: string;
+    commModeCaptioningDesc: string;
+    commSpeakButton: string;
+    commStopButton: string;
+    commVoiceHindiUnavailable: string;
+    commSpeechUnsupported: string;
+    commReadAloudDemoText: string;
+    commPhraseBoardTitle: string;
+    commPhraseBoardSpokenLabel: string;
+    commPhraseBoardNote: string;
+    commPainLabel: string;
+    commPainSentence: string;
+    commCaptionTitle: string;
+    commCaptionInternetBadge: string;
+    commCaptionOfflineMessage: string;
+    commCaptionUnsupported: string;
+    commCaptionHoldToTalk: string;
+    commCaptionListening: string;
+    commCaptionClear: string;
+    commCaptionEmptyState: string;
+    commPhrases: CommPhrase[];
 }
 
 const en: Strings = {
@@ -377,6 +417,62 @@ const en: Strings = {
     emgSave: "Save",
     emgNone: "None on file",
     emgUnknown: "Unknown",
+    // Communication Assistance
+    commSectionTitle: "Communication Assistance",
+    commSectionSubtitle: "Tools for patients who cannot speak, cannot hear, or cannot read.",
+    commProfileTitle: "Communication profile",
+    commCanSpeakLabel: "Can speak",
+    commCanHearLabel: "Can hear",
+    commCanReadLabel: "Can read",
+    commNonSpeakingNote: "Patient marked as non-speaking — vocal tests not applicable",
+    commModeReadAloud: "Read aloud",
+    commModeReadAloudDesc: "Speaks any guidance or instruction card out loud on tap. Works fully offline.",
+    commModePhraseBoard: "Phrase board",
+    commModePhraseBoardDesc: "Tap a phrase or a pain number to speak it out loud for the clinician.",
+    commModeCaptioning: "Live captioning",
+    commModeCaptioningDesc: "Turns the clinician's speech into large on-screen text.",
+    commSpeakButton: "Read aloud",
+    commStopButton: "Stop",
+    commVoiceHindiUnavailable: "Hindi voice not available on this device — using English instead",
+    commSpeechUnsupported: "Speech playback is not supported in this browser.",
+    commReadAloudDemoText:
+        "Tap the speaker icon on any guidance or instruction card to hear it read aloud, any time.",
+    commPhraseBoardTitle: "Tap to speak",
+    commPhraseBoardSpokenLabel: "Patient is saying:",
+    commPhraseBoardNote: "Full gesture-based communication support is planned for a future update.",
+    commPainLabel: "Pain level (0–10)",
+    commPainSentence: "Pain level {level}",
+    commCaptionTitle: "Live captioning",
+    commCaptionInternetBadge: "Requires internet",
+    commCaptionOfflineMessage:
+        "No internet connection — live captioning needs a data or Wi-Fi connection and is disabled right now.",
+    commCaptionUnsupported: "Live captioning is not supported in this browser.",
+    commCaptionHoldToTalk: "Hold to talk",
+    commCaptionListening: "Listening…",
+    commCaptionClear: "Clear",
+    commCaptionEmptyState: "Press and hold the mic to start captioning.",
+    commPhrases: [
+        { id: "chest-pain", icon: "🫀", text: "Chest pain" },
+        { id: "dizziness", icon: "💫", text: "Dizziness" },
+        { id: "cant-breathe", icon: "🌬️", text: "I can't breathe" },
+        { id: "water", icon: "💧", text: "Water" },
+        { id: "bathroom", icon: "🚻", text: "Bathroom" },
+        { id: "call-family", icon: "👪", text: "Call my family" },
+        { id: "yes", icon: "✅", text: "Yes" },
+        { id: "no", icon: "❌", text: "No" },
+        { id: "since-morning", icon: "🌅", text: "Since this morning" },
+        { id: "since-yesterday", icon: "🌙", text: "Since yesterday" },
+        { id: "fever", icon: "🤒", text: "Fever" },
+        { id: "vomiting", icon: "🤮", text: "Vomiting" },
+        { id: "headache", icon: "🤕", text: "Headache" },
+        { id: "weakness", icon: "😩", text: "Weakness" },
+        { id: "stomach-pain", icon: "🍽️", text: "Stomach pain" },
+        { id: "cough", icon: "😮‍💨", text: "Cough" },
+        { id: "allergic-reaction", icon: "🚨", text: "Allergic reaction" },
+        { id: "pregnant", icon: "🤰", text: "I am pregnant" },
+        { id: "bleeding", icon: "🩸", text: "Bleeding" },
+        { id: "help", icon: "⚠️", text: "Help me" },
+    ],
 };
 
 const hi: Strings = {
@@ -580,6 +676,62 @@ const hi: Strings = {
     emgSave: "सेव करें",
     emgNone: "कोई नहीं",
     emgUnknown: "अज्ञात",
+    // Communication Assistance
+    commSectionTitle: "संचार सहायता",
+    commSectionSubtitle: "उन मरीज़ों के लिए उपकरण जो बोल, सुन या पढ़ नहीं सकते।",
+    commProfileTitle: "संचार प्रोफ़ाइल",
+    commCanSpeakLabel: "बोल सकते हैं",
+    commCanHearLabel: "सुन सकते हैं",
+    commCanReadLabel: "पढ़ सकते हैं",
+    commNonSpeakingNote: "मरीज़ को गैर-वाचिक (non-speaking) चिह्नित किया गया है — वाचिक जाँच लागू नहीं",
+    commModeReadAloud: "ज़ोर से पढ़ें",
+    commModeReadAloudDesc: "टैप करने पर किसी भी मार्गदर्शन या निर्देश कार्ड को ज़ोर से पढ़ता है। पूरी तरह ऑफ़लाइन काम करता है।",
+    commModePhraseBoard: "वाक्यांश बोर्ड",
+    commModePhraseBoardDesc: "चिकित्सक के लिए वाक्यांश या दर्द का स्तर टैप करके सुनाएँ।",
+    commModeCaptioning: "लाइव कैप्शनिंग",
+    commModeCaptioningDesc: "चिकित्सक की बात को बड़े अक्षरों में स्क्रीन पर दिखाता है।",
+    commSpeakButton: "ज़ोर से पढ़ें",
+    commStopButton: "रोकें",
+    commVoiceHindiUnavailable: "इस डिवाइस पर हिंदी आवाज़ उपलब्ध नहीं — अंग्रेज़ी में सुनाया जा रहा है",
+    commSpeechUnsupported: "इस ब्राउज़र में आवाज़ चलाना उपलब्ध नहीं है।",
+    commReadAloudDemoText:
+        "किसी भी मार्गदर्शन या निर्देश कार्ड पर स्पीकर आइकन टैप करके, कभी भी उसे सुनें।",
+    commPhraseBoardTitle: "बोलने के लिए टैप करें",
+    commPhraseBoardSpokenLabel: "मरीज़ कह रहा है:",
+    commPhraseBoardNote: "इशारों पर आधारित पूर्ण संचार सहायता भविष्य के अपडेट में जोड़ी जाएगी।",
+    commPainLabel: "दर्द का स्तर (0–10)",
+    commPainSentence: "दर्द का स्तर {level}",
+    commCaptionTitle: "लाइव कैप्शनिंग",
+    commCaptionInternetBadge: "इंटरनेट आवश्यक",
+    commCaptionOfflineMessage:
+        "इंटरनेट कनेक्शन नहीं है — लाइव कैप्शनिंग के लिए डेटा या वाई-फ़ाई ज़रूरी है, इसलिए अभी बंद है।",
+    commCaptionUnsupported: "इस ब्राउज़र में लाइव कैप्शनिंग उपलब्ध नहीं है।",
+    commCaptionHoldToTalk: "बोलने के लिए दबाए रखें",
+    commCaptionListening: "सुन रहा है…",
+    commCaptionClear: "मिटाएँ",
+    commCaptionEmptyState: "कैप्शनिंग शुरू करने के लिए माइक दबाकर रखें।",
+    commPhrases: [
+        { id: "chest-pain", icon: "🫀", text: "सीने में दर्द" },
+        { id: "dizziness", icon: "💫", text: "चक्कर आना" },
+        { id: "cant-breathe", icon: "🌬️", text: "मुझे साँस नहीं आ रही" },
+        { id: "water", icon: "💧", text: "पानी" },
+        { id: "bathroom", icon: "🚻", text: "शौचालय" },
+        { id: "call-family", icon: "👪", text: "मेरे परिवार को बुलाओ" },
+        { id: "yes", icon: "✅", text: "हाँ" },
+        { id: "no", icon: "❌", text: "नहीं" },
+        { id: "since-morning", icon: "🌅", text: "आज सुबह से" },
+        { id: "since-yesterday", icon: "🌙", text: "कल से" },
+        { id: "fever", icon: "🤒", text: "बुखार" },
+        { id: "vomiting", icon: "🤮", text: "उल्टी" },
+        { id: "headache", icon: "🤕", text: "सिरदर्द" },
+        { id: "weakness", icon: "😩", text: "कमज़ोरी" },
+        { id: "stomach-pain", icon: "🍽️", text: "पेट दर्द" },
+        { id: "cough", icon: "😮‍💨", text: "खाँसी" },
+        { id: "allergic-reaction", icon: "🚨", text: "एलर्जी प्रतिक्रिया" },
+        { id: "pregnant", icon: "🤰", text: "मैं गर्भवती हूँ" },
+        { id: "bleeding", icon: "🩸", text: "खून बह रहा है" },
+        { id: "help", icon: "⚠️", text: "मदद करो" },
+    ],
 };
 
 const STRINGS: Record<Locale, Strings> = { en, hi };

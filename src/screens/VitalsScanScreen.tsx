@@ -4,6 +4,7 @@ import { SCAN_DURATION_MS, useRppgScan, type Status } from "../hooks/useRppgScan
 import { evaluateTriage, type TriageResult } from "../lib/triage";
 import { getStrings, type Locale, type Strings } from "../lib/translations";
 import { useFusionSession } from "../lib/fusionStore";
+import { Link } from "@tanstack/react-router";
 import {
     clearScans,
     loadLocale,
@@ -50,6 +51,11 @@ export function VitalsScanScreen() {
             locale,
             triageLevel: triage.level,
         });
+        try {
+            window.localStorage.setItem("univolt.last.face.scan.id", result.scanId);
+        } catch {
+            // The scan remains usable even when local storage is unavailable.
+        }
         // Task 2: feed rPPG result into the fusion session store
         setRppg({ bpm: result.bpm, rr: result.rr, hrv: result.hrv, quality: result.quality });
         setHistory(loadScans());
@@ -254,6 +260,11 @@ export function VitalsScanScreen() {
 
                 {state.phase === "complete" && detected && triage !== null && (
                     <GuidanceCard t={t} triage={triage} locale={locale} onSetLocale={setLocale} />
+                )}
+                {state.phase === "complete" && detected && (
+                    <Link to="/spo2" style={secondaryButtonStyle}>
+                        {t.spo2AddButton}
+                    </Link>
                 )}
                 {state.phase === "complete" && (
                     <button style={primaryButtonStyle} onClick={actions.reset}>

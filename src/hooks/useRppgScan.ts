@@ -202,6 +202,7 @@ export interface UseRppgScanApi {
     actions: {
         reset: () => void;
         requestCamera: () => void;
+        releaseCamera: () => void;
     };
 }
 
@@ -560,9 +561,13 @@ export function useRppgScan({ videoRef, ppgCanvasRef }: UseRppgScanOptions): Use
         void startCamera();
     }, [startCamera]);
 
+    const releaseCamera = useCallback((): void => {
+        stopCamera();
+    }, [stopCamera]);
+
     const api = useMemo(
-        () => ({ state, actions: { reset, requestCamera } }),
-        [state, reset, requestCamera],
+        () => ({ state, actions: { reset, requestCamera, releaseCamera } }),
+        [state, reset, requestCamera, releaseCamera],
     );
     return api;
 }

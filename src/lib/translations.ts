@@ -125,6 +125,26 @@ export interface Strings {
     spo2ManualPlaceholder: string;
     spo2ManualSave: string;
     spo2ManualPoint: string;
+    spo2Title: string;
+    spo2AddButton: string;
+    spo2StartButton: string;
+    spo2Positioning: string;
+    spo2Measuring: string;
+    spo2TorchUnavailable: string;
+    spo2CameraError: string;
+    spo2NoContact: string;
+    spo2Complete: string;
+    spo2ResultLabel: string;
+    spo2ScreeningDisclaimer: string;
+    spo2Hygiene: string;
+    spo2UnableBody: string;
+    spo2CancelButton: string;
+    spo2NewScanButton: string;
+    spo2Back: string;
+    spo2PatientNotFound: string;
+    spo2ManualSaved: string;
+    spo2UrgentReason: string;
+    spo2LowReason: string;
     // ── Delta banner ───────────────────────────────────────────────────────────────────
     deltaHrUp: string;
     deltaHrDown: string;
@@ -386,6 +406,26 @@ const en: Strings = {
     spo2ManualPlaceholder: "e.g. 98",
     spo2ManualSave: "Save reading",
     spo2ManualPoint: "Manual",
+    spo2Title: "Fingertip SpO₂ scan",
+    spo2AddButton: "Add SpO₂ (fingertip, ~20 s)",
+    spo2StartButton: "Start SpO₂ scan",
+    spo2Positioning: "Place your fingertip firmly over the rear camera lens",
+    spo2Measuring: "Keep your fingertip still",
+    spo2TorchUnavailable: "Fingertip scan is not available on this device. Enter a pulse-oximeter reading instead.",
+    spo2CameraError: "Camera access is needed for the fingertip scan. Enter a pulse-oximeter reading instead.",
+    spo2NoContact: "No fingertip contact detected",
+    spo2Complete: "SpO₂ scan complete",
+    spo2ResultLabel: "SpO₂ estimate",
+    spo2ScreeningDisclaimer: "Screening only, not a certified pulse oximeter",
+    spo2Hygiene: "Sanitize the camera lens between patients",
+    spo2UnableBody: "The fingertip signal was not strong enough to produce a reliable estimate. Try again or enter a pulse-oximeter reading.",
+    spo2CancelButton: "Cancel scan",
+    spo2NewScanButton: "New SpO₂ scan",
+    spo2Back: "Back",
+    spo2PatientNotFound: "Patient not found",
+    spo2ManualSaved: "Saved",
+    spo2UrgentReason: "SpO₂ < 90%",
+    spo2LowReason: "SpO₂ 90–94%",
     // Delta banner
     deltaHrUp: "Heart rate up {delta} bpm; {range}.",
     deltaHrDown: "Heart rate down {delta} bpm; {range}.",
@@ -672,6 +712,26 @@ const hi: Strings = {
     spo2ManualPlaceholder: "जैसे 98",
     spo2ManualSave: "रीडिंग सेव करें",
     spo2ManualPoint: "क्रमांकित",
+    spo2Title: "उंगली से SpO₂ जाँच",
+    spo2AddButton: "SpO₂ जोड़ें (उंगली, लगभग 20 सेकंड)",
+    spo2StartButton: "SpO₂ जाँच शुरू करें",
+    spo2Positioning: "अपनी उंगली को पीछे के कैमरा लेंस पर मजबूती से रखें",
+    spo2Measuring: "उंगली को स्थिर रखें",
+    spo2TorchUnavailable: "इस डिवाइस पर उंगली की जाँच उपलब्ध नहीं है। इसके बजाय पल्स-ऑक्सीमीटर की रीडिंग दर्ज करें।",
+    spo2CameraError: "उंगली की जाँच के लिए कैमरा अनुमति चाहिए। इसके बजाय पल्स-ऑक्सीमीटर की रीडिंग दर्ज करें।",
+    spo2NoContact: "उंगली का संपर्क नहीं मिला",
+    spo2Complete: "SpO₂ जाँच पूरी",
+    spo2ResultLabel: "SpO₂ अनुमान",
+    spo2ScreeningDisclaimer: "केवल स्क्रीनिंग, प्रमाणित पल्स ऑक्सीमीटर नहीं",
+    spo2Hygiene: "मरीज़ों के बीच कैमरा लेंस को साफ़ करें",
+    spo2UnableBody: "उंगली का सिग्नल भरोसेमंद अनुमान के लिए पर्याप्त नहीं था। फिर प्रयास करें या पल्स-ऑक्सीमीटर की रीडिंग दर्ज करें।",
+    spo2CancelButton: "जाँच रद्द करें",
+    spo2NewScanButton: "नई SpO₂ जाँच",
+    spo2Back: "वापस",
+    spo2PatientNotFound: "मरीज़ नहीं मिला",
+    spo2ManualSaved: "सेव हो गया",
+    spo2UrgentReason: "SpO₂ < 90%",
+    spo2LowReason: "SpO₂ 90–94%",
     // Delta banner
     deltaHrUp: "हृदय गति {delta} bpm बढ़ी; {range}.",
     deltaHrDown: "हृदय गति {delta} bpm घटी; {range}.",

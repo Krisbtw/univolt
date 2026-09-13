@@ -1,5 +1,7 @@
 import type { TriageLevel } from "./triage";
 import type { Locale } from "./translations";
+import { evaluateTriage } from "./triage";
+import type { Spo2Quality } from "./spo2Engine";
 
 export interface ScanRecord {
     id: string;
@@ -8,6 +10,7 @@ export interface ScanRecord {
     bpm: number | null;
     hrv: number | null;
     spo2: number | null;
+    spo2Quality?: Spo2Quality;
     rr: number | null;
     locale: Locale;
     triageLevel: TriageLevel;
@@ -92,6 +95,13 @@ export function loadScans(): ScanRecord[] {
                 bpm: numOrNull(item.bpm),
                 hrv: numOrNull(item.hrv),
                 spo2: numOrNull(item.spo2),
+                spo2Quality:
+                    item.spo2Quality === "good" ||
+                    item.spo2Quality === "weak" ||
+                    item.spo2Quality === "reject" ||
+                    item.spo2Quality === "manual"
+                        ? item.spo2Quality
+                        : undefined,
                 rr: numOrNull(item.rr),
                 locale,
                 triageLevel,
@@ -113,6 +123,39 @@ export function saveScan(record: ScanRecord): void {
     } catch {
         // storage full or blocked — scan is still shown in-session
     }
+}
+
+/** Attach a valid fingertip or manual SpO₂ point to an existing face scan. */
+export function updateScanSpo2(
+    scanId: string,
+    spo2: number | null,
+    quality: Spo2Quality,
+): ScanRecord | null {
+    const store = storage();
+    const scans = loadScans();
+    const index = scans.findIndex((scan) => scan.id === scanId);
+    if (index < 0) return null;
+    const current = scans[index];
+    const updated: ScanRecord = {
+        ...current,
+        spo2,
+        spo2Quality: quality,
+        triageLevel: evaluateTriage({
+            bpm: current.bpm,
+            hrv: current.hrv,
+            spo2,
+            rr: current.rr,
+        }).level,
+    };
+    scans[index] = updated;
+    if (store) {
+        try {
+            store.setItem(SCANS_KEY, JSON.stringify(scans.slice(0, MAX_HISTORY)));
+        } catch {
+            // The result remains visible to the caller even when storage is full.
+        }
+    }
+    return updated;
 }
 
 export function clearScans(): void {

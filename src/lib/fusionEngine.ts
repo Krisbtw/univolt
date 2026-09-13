@@ -5,6 +5,8 @@
  * Priority chain: urgent > phc_today > self_care > insufficient_data
  */
 
+import { SPO2_HYPOXIA, SPO2_URGENT } from "./triage";
+
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export interface FusionSymptoms {
@@ -22,11 +24,17 @@ export interface FusionRppg {
   quality: "good" | "weak" | "reject";
 }
 
+export interface FusionSpo2 {
+  value: number | null;
+  quality: "good" | "weak" | "reject" | "manual";
+}
+
 export interface FusionInputs {
   ageYears?: number;
   pregnant?: boolean;
   symptoms?: FusionSymptoms;
   rppg?: FusionRppg;
+  spo2?: FusionSpo2;
   crtSec?: number | null;
   fetSec?: number | null;
 }
@@ -73,26 +81,33 @@ function rppgWeak(r: FusionRppg | undefined): boolean {
   return !!r && r.quality === "weak";
 }
 
+function spo2Rejected(s: FusionSpo2 | undefined): boolean {
+  return !s || s.quality === "reject" || s.value == null;
+}
+
 // ── Main evaluator ────────────────────────────────────────────────────────────
 
 export function evaluateFusion(inputs: FusionInputs): FusionResult {
-  const { ageYears, pregnant, symptoms: sx, rppg, crtSec, fetSec } = inputs;
+  const { ageYears, pregnant, symptoms: sx, rppg, spo2, crtSec, fetSec } = inputs;
   const reasons: FusionReason[] = [];
 
   // Count measured signals (for the insufficient_data gate).
   let signalsUsed = 0;
   const bpmMeasured = !rppgRejected(rppg) && rppg?.bpm != null;
   const rrMeasured = !rppgRejected(rppg) && rppg?.rr != null;
+  const spo2Measured = !spo2Rejected(spo2);
   const crtMeasured = crtSec != null;
   const fetMeasured = fetSec != null;
 
   if (bpmMeasured) signalsUsed++;
   if (rrMeasured) signalsUsed++;
+  if (spo2Measured) signalsUsed++;
   if (crtMeasured) signalsUsed++;
   if (fetMeasured) signalsUsed++;
 
   const bpm = bpmMeasured ? rppg!.bpm! : null;
   const rr = rrMeasured ? rppg!.rr! : null;
+  const spo2Value = spo2Measured ? spo2!.value! : null;
   const crt = crtMeasured ? crtSec! : null;
   const fet = fetMeasured ? fetSec! : null;
 
@@ -110,6 +125,9 @@ export function evaluateFusion(inputs: FusionInputs): FusionResult {
 
   if (canUrgent && bpm != null && bpm > HR_EXTREME) {
     reasons.push({ code: "bpm_extreme", weight: 10 });
+  }
+  if (spo2Value != null && spo2Value < SPO2_URGENT) {
+    reasons.push({ code: "spo2_urgent", weight: 10 });
   }
   if (canUrgent && bpm != null && bpm > HR_TACHY && crt != null && crt > CRT_BORDERLINE) {
     reasons.push({ code: "shock_pattern", weight: 10 });
@@ -136,6 +154,9 @@ export function evaluateFusion(inputs: FusionInputs): FusionResult {
   }
   if (rr != null && rr > RR_TACHYPNEA) {
     reasons.push({ code: "tachypnea", weight: 6 });
+  }
+  if (spo2Value != null && spo2Value >= SPO2_URGENT && spo2Value < SPO2_HYPOXIA + 1) {
+    reasons.push({ code: "spo2_low", weight: 6 });
   }
   if (crt != null && crt >= CRT_BORDERLINE && crt <= CRT_ABNORMAL) {
     reasons.push({ code: "crt_elevated", weight: 5 });
@@ -164,11 +185,12 @@ export function evaluateFusion(inputs: FusionInputs): FusionResult {
   // ── SELF CARE ─────────────────────────────────────────────────────────────
   const hrOk = bpm == null || (bpm >= HR_MIN && bpm <= HR_MAX);
   const rrOk = rr == null || (rr >= RR_MIN && rr <= RR_MAX);
+  const spo2Ok = spo2Value == null || spo2Value >= SPO2_HYPOXIA + 1;
   const crtOk = crt == null || crt < CRT_BORDERLINE;
   const fetOk = fet == null || fet <= FET_OBSTRUCTION;
   const sxOk = !redFlagSx;
 
-  if (hrOk && rrOk && crtOk && fetOk && sxOk) {
+  if (hrOk && rrOk && spo2Ok && crtOk && fetOk && sxOk) {
     reasons.push({ code: "all_normal", weight: 1 });
     return { level: "self_care", reasons, signalsUsed };
   }

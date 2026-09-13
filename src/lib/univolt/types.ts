@@ -1,3 +1,6 @@
+import type { Spo2Quality } from "../spo2Engine";
+export type { Spo2Quality } from "../spo2Engine";
+
 export type Sex = "F" | "M" | "X";
 
 export type BloodGroup = "A+" | "A-" | "B+" | "B-" | "AB+" | "AB-" | "O+" | "O-" | "unknown";
@@ -50,11 +53,9 @@ export type VitalsScan = {
   hrvRmssd: number;
   signalQuality: number;
   respiratoryRate: number;
-  /**
-   * SpO₂ estimate from the camera rPPG pipeline (simulated / unreliable).
-   * For the honest SpO₂ display we only show MANUAL readings.
-   */
-  spo2Estimate: number;
+    /** SpO₂ from an accepted fingertip scan or manual pulse-oximeter entry. */
+  spo2Estimate: number | null;
+  spo2Quality?: Spo2Quality;
   peakCount: number;
   durationSec: number;
   simulated: boolean;
@@ -94,7 +95,8 @@ export type PpgResult = {
   hrvRmssd: number;
   signalQuality: number;
   respiratoryRate: number;
-  spo2Estimate: number;
+  spo2Estimate: number | null;
+  spo2Quality?: Spo2Quality;
   peakCount: number;
   durationSec: number;
   sampleRate: number;

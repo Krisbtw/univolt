@@ -3,6 +3,8 @@ import { Link } from "@tanstack/react-router";
 import { evaluateFusion, type FusionLevel, type FusionReason } from "../lib/fusionEngine";
 import { useFusionSession } from "../lib/fusionStore";
 import { classifyFet } from "../lib/breathAudioEngine";
+import { getStrings } from "../lib/translations";
+import { loadLocale } from "../lib/vitalsDatabase";
 
 // ── Reason code → human-readable label (en only for now) ────────────────────
 
@@ -23,7 +25,9 @@ const REASON_LABELS: Record<string, string> = {
   all_normal: "All measured signals in normal range",
 };
 
-function labelFor(reason: FusionReason): string {
+function labelFor(reason: FusionReason, spo2UrgentReason: string, spo2LowReason: string): string {
+  if (reason.code === "spo2_urgent") return spo2UrgentReason;
+  if (reason.code === "spo2_low") return spo2LowReason;
   return REASON_LABELS[reason.code] ?? reason.code;
 }
 
@@ -46,6 +50,7 @@ function levelStyle(level: FusionLevel): { bg: string; border: string; color: st
 
 export function FusionScreen() {
   const session = useFusionSession();
+  const t = useMemo(() => getStrings(loadLocale() ?? "en"), []);
 
   // Local questionnaire state
   const [age, setAge] = useState(session.ageYears?.toString() ?? "");
@@ -68,9 +73,10 @@ export function FusionScreen() {
       feverDays: feverDays ? parseInt(feverDays, 10) : undefined,
     },
     rppg: session.rppg,
+    spo2: session.spo2,
     crtSec: session.crtSec,
     fetSec: session.fetSec,
-  }), [age, pregnant, breathless, chestPain, fainting, bleeding, feverDays, session.rppg, session.crtSec, session.fetSec]);
+  }), [age, pregnant, breathless, chestPain, fainting, bleeding, feverDays, session.rppg, session.spo2, session.crtSec, session.fetSec]);
 
   const result = useMemo(() => evaluateFusion(inputs), [inputs]);
   const ls = levelStyle(result.level);
@@ -106,6 +112,13 @@ export function FusionScreen() {
                 quality={session.rppg.quality}
               />
             ) : <SignalBadge label="rPPG" value="Not measured" quality="reject" />}
+            {session.spo2 ? (
+              <SignalBadge
+                label="SpO₂"
+                value={session.spo2.value != null ? `${session.spo2.value}%` : t.unableToDetect}
+                quality={session.spo2.quality}
+              />
+            ) : <SignalBadge label="SpO₂" value="Not measured" quality="reject" />}
             {session.fetSec != null ? (
               <SignalBadge
                 label="FET"
@@ -156,7 +169,7 @@ export function FusionScreen() {
               {result.reasons.map(r => (
                 <li key={r.code} style={reasonItemStyle}>
                   <span style={reasonDotStyle(r.weight)} />
-                  {labelFor(r)}
+                  {labelFor(r, t.spo2UrgentReason, t.spo2LowReason)}
                 </li>
               ))}
             </ul>
@@ -178,8 +191,8 @@ export function FusionScreen() {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function SignalBadge({ label, value, quality }: { label: string; value: string; quality: "good" | "weak" | "reject" }) {
-  const color = quality === "good" ? "#4ade80" : quality === "weak" ? "#fbbf24" : "#64748b";
+function SignalBadge({ label, value, quality }: { label: string; value: string; quality: "good" | "weak" | "reject" | "manual" }) {
+  const color = quality === "good" || quality === "manual" ? "#4ade80" : quality === "weak" ? "#fbbf24" : "#64748b";
   return (
     <div style={{ background: "#0f172a", border: `1px solid ${color}44`, borderRadius: 10, padding: "10px 14px" }}>
       <p style={{ margin: 0, fontSize: 11, color: "#64748b", fontWeight: 600 }}>{label}</p>

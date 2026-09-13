@@ -270,11 +270,22 @@ function PatientProfileScreen() {
 
   const [windowDays, setWindowDays] = useState<WindowDays>(7);
   const [summary, setSummary] = useState<VisitSummary | null>(null);
+  const t = useMemo(() => getStrings(loadLocale() ?? "en"), []);
 
   const cameraScans = scans.filter((s) => !s.source || s.source === "scan");
   const manualSpo2Scans = scans.filter((s) => s.source === "manual");
+  const acceptedSpo2Scans = scans.filter(
+    (s) =>
+      s.spo2Estimate != null &&
+      (s.source === "manual" || s.spo2Quality === "good" || s.spo2Quality === "weak"),
+  );
   const lastScan = cameraScans[cameraScans.length - 1] ?? null;
   const lastManualSpo2 = manualSpo2Scans[manualSpo2Scans.length - 1] ?? null;
+  const cameraSpo2 =
+    lastScan?.spo2Quality === "good" || lastScan?.spo2Quality === "weak"
+      ? lastScan.spo2Estimate
+      : null;
+  const latestSpo2 = cameraSpo2 ?? lastManualSpo2?.spo2Estimate ?? null;
 
   const hasTwoScans = cameraScans.length >= 2;
 
@@ -330,6 +341,13 @@ function PatientProfileScreen() {
             </Link>
           </Button>
         </div>
+        <Link
+          to="/patient/$id/spo2"
+          params={{ id: patient.id }}
+          className="flex items-center justify-center rounded-[16px] border border-pink-400/30 bg-pink-400/6 px-4 py-3 text-sm font-semibold text-pink-300"
+        >
+          {t.spo2AddButton}
+        </Link>
 
         {/* Emergency card link */}
         <Link
@@ -353,13 +371,13 @@ function PatientProfileScreen() {
               <Metric label="Resp. rate" value={`${lastScan.respiratoryRate}`} unit="/min" />
               <Metric
                 label="SpO₂"
-                value={lastManualSpo2 ? `${lastManualSpo2.spo2Estimate}` : "--"}
-                unit={lastManualSpo2 ? "%" : ""}
+                value={latestSpo2 != null ? `${latestSpo2}` : "--"}
+                unit={latestSpo2 != null ? "%" : ""}
               />
             </div>
-            {!lastManualSpo2 && (
+            {latestSpo2 == null && (
               <p className="mt-2 text-[11px] leading-relaxed text-faint">
-                SpO₂ not measured — camera rPPG cannot replace a pulse oximeter.
+                {t.spo2EmptyState}
               </p>
             )}
             <div className="mt-2 flex items-center justify-between text-[12px] text-muted">
@@ -403,8 +421,8 @@ function PatientProfileScreen() {
               <ChartRow label="Respiratory Rate" unit="/min">
                 <RrChart scans={scans} windowDays={windowDays} />
               </ChartRow>
-              <ChartRow label="SpO₂ — manual readings only" unit="%">
-                {manualSpo2Scans.length === 0 ? (
+              <ChartRow label="SpO₂ readings" unit="%">
+                {acceptedSpo2Scans.length === 0 ? (
                   <p className="py-3 text-sm text-faint">
                     SpO₂ not measured — enter a reading if you have a pulse oximeter.
                   </p>

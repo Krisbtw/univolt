@@ -16,12 +16,14 @@ import { Route as FusionRouteImport } from './routes/fusion'
 import { Route as ReferralRouteImport } from './routes/referral'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ScanRouteImport } from './routes/scan'
+import { Route as Spo2RouteImport } from './routes/spo2'
 import { Route as EmergencyIdRouteImport } from './routes/emergency.$id'
 import { Route as PatientIdRouteImport } from './routes/patient.$id'
 import { Route as PatientIdIndexRouteImport } from './routes/patient.$id.index'
 import { Route as PatientIdCoughRouteImport } from './routes/patient.$id.cough'
 import { Route as PatientIdGestureRouteImport } from './routes/patient.$id.gesture'
 import { Route as PatientIdScanRouteImport } from './routes/patient.$id.scan'
+import { Route as PatientIdSpo2RouteImport } from './routes/patient.$id.spo2'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -58,6 +60,11 @@ const ScanRoute = ScanRouteImport.update({
   path: '/scan',
   getParentRoute: () => rootRouteImport,
 } as any)
+const Spo2Route = Spo2RouteImport.update({
+  id: '/spo2',
+  path: '/spo2',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EmergencyIdRoute = EmergencyIdRouteImport.update({
   id: '/emergency/$id',
   path: '/emergency/$id',
@@ -88,6 +95,11 @@ const PatientIdScanRoute = PatientIdScanRouteImport.update({
   path: '/scan',
   getParentRoute: () => PatientIdRoute,
 } as any)
+const PatientIdSpo2Route = PatientIdSpo2RouteImport.update({
+  id: '/spo2',
+  path: '/spo2',
+  getParentRoute: () => PatientIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -97,11 +109,13 @@ export interface FileRoutesByFullPath {
   '/referral': typeof ReferralRoute
   '/register': typeof RegisterRoute
   '/scan': typeof ScanRoute
+  '/spo2': typeof Spo2Route
   '/emergency/$id': typeof EmergencyIdRoute
   '/patient/$id': typeof PatientIdRouteWithChildren
   '/patient/$id/cough': typeof PatientIdCoughRoute
   '/patient/$id/gesture': typeof PatientIdGestureRoute
   '/patient/$id/scan': typeof PatientIdScanRoute
+  '/patient/$id/spo2': typeof PatientIdSpo2Route
   '/patient/$id/': typeof PatientIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -112,10 +126,12 @@ export interface FileRoutesByTo {
   '/referral': typeof ReferralRoute
   '/register': typeof RegisterRoute
   '/scan': typeof ScanRoute
+  '/spo2': typeof Spo2Route
   '/emergency/$id': typeof EmergencyIdRoute
   '/patient/$id/cough': typeof PatientIdCoughRoute
   '/patient/$id/gesture': typeof PatientIdGestureRoute
   '/patient/$id/scan': typeof PatientIdScanRoute
+  '/patient/$id/spo2': typeof PatientIdSpo2Route
   '/patient/$id': typeof PatientIdIndexRoute
 }
 export interface FileRoutesById {
@@ -127,11 +143,13 @@ export interface FileRoutesById {
   '/referral': typeof ReferralRoute
   '/register': typeof RegisterRoute
   '/scan': typeof ScanRoute
+  '/spo2': typeof Spo2Route
   '/emergency/$id': typeof EmergencyIdRoute
   '/patient/$id': typeof PatientIdRouteWithChildren
   '/patient/$id/cough': typeof PatientIdCoughRoute
   '/patient/$id/gesture': typeof PatientIdGestureRoute
   '/patient/$id/scan': typeof PatientIdScanRoute
+  '/patient/$id/spo2': typeof PatientIdSpo2Route
   '/patient/$id/': typeof PatientIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -144,11 +162,13 @@ export interface FileRouteTypes {
     | '/referral'
     | '/register'
     | '/scan'
+    | '/spo2'
     | '/emergency/$id'
     | '/patient/$id'
     | '/patient/$id/cough'
     | '/patient/$id/gesture'
     | '/patient/$id/scan'
+    | '/patient/$id/spo2'
     | '/patient/$id/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -159,10 +179,12 @@ export interface FileRouteTypes {
     | '/referral'
     | '/register'
     | '/scan'
+    | '/spo2'
     | '/emergency/$id'
     | '/patient/$id/cough'
     | '/patient/$id/gesture'
     | '/patient/$id/scan'
+    | '/patient/$id/spo2'
     | '/patient/$id'
   id:
     | '__root__'
@@ -173,11 +195,13 @@ export interface FileRouteTypes {
     | '/referral'
     | '/register'
     | '/scan'
+    | '/spo2'
     | '/emergency/$id'
     | '/patient/$id'
     | '/patient/$id/cough'
     | '/patient/$id/gesture'
     | '/patient/$id/scan'
+    | '/patient/$id/spo2'
     | '/patient/$id/'
   fileRoutesById: FileRoutesById
 }
@@ -189,6 +213,7 @@ export interface RootRouteChildren {
   ReferralRoute: typeof ReferralRoute
   RegisterRoute: typeof RegisterRoute
   ScanRoute: typeof ScanRoute
+  Spo2Route: typeof Spo2Route
   EmergencyIdRoute: typeof EmergencyIdRoute
   PatientIdRoute: typeof PatientIdRouteWithChildren
 }
@@ -244,6 +269,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ScanRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/spo2': {
+      id: '/spo2'
+      path: '/spo2'
+      fullPath: '/spo2'
+      preLoaderRoute: typeof Spo2RouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/emergency/$id': {
       id: '/emergency/$id'
       path: '/emergency/$id'
@@ -286,6 +318,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PatientIdScanRouteImport
       parentRoute: typeof PatientIdRoute
     }
+    '/patient/$id/spo2': {
+      id: '/patient/$id/spo2'
+      path: '/spo2'
+      fullPath: '/patient/$id/spo2'
+      preLoaderRoute: typeof PatientIdSpo2RouteImport
+      parentRoute: typeof PatientIdRoute
+    }
   }
 }
 
@@ -293,6 +332,7 @@ interface PatientIdRouteChildren {
   PatientIdCoughRoute: typeof PatientIdCoughRoute
   PatientIdGestureRoute: typeof PatientIdGestureRoute
   PatientIdScanRoute: typeof PatientIdScanRoute
+  PatientIdSpo2Route: typeof PatientIdSpo2Route
   PatientIdIndexRoute: typeof PatientIdIndexRoute
 }
 
@@ -300,6 +340,7 @@ const PatientIdRouteChildren: PatientIdRouteChildren = {
   PatientIdCoughRoute: PatientIdCoughRoute,
   PatientIdGestureRoute: PatientIdGestureRoute,
   PatientIdScanRoute: PatientIdScanRoute,
+  PatientIdSpo2Route: PatientIdSpo2Route,
   PatientIdIndexRoute: PatientIdIndexRoute,
 }
 
@@ -315,6 +356,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReferralRoute: ReferralRoute,
   RegisterRoute: RegisterRoute,
   ScanRoute: ScanRoute,
+  Spo2Route: Spo2Route,
   EmergencyIdRoute: EmergencyIdRoute,
   PatientIdRoute: PatientIdRouteWithChildren,
 }

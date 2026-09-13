@@ -1,6 +1,15 @@
 import { create } from "zustand";
 import { loadOrSeed, makeId, nextCaseId, newPatientInput, saveDb } from "./database";
-import type { BloodGroup, CommunicationProfile, CoughResult, Patient, PpgResult, Sex, UnivoltDb } from "./types";
+import type {
+  BloodGroup,
+  CommunicationProfile,
+  CoughResult,
+  Patient,
+  PpgResult,
+  Sex,
+  Spo2Quality,
+  UnivoltDb,
+} from "./types";
 
 type UnivoltState = {
   ready: boolean;
@@ -11,6 +20,8 @@ type UnivoltState = {
   addCoughScreening: (patientId: string, result: CoughResult) => void;
   /** Add a manual pulse-oximeter SpO₂ reading for a patient. */
   addManualSpo2: (patientId: string, spo2: number) => void;
+  /** Attach a camera SpO₂ result to the patient's latest face scan. */
+  updateLatestVitalsSpo2: (patientId: string, spo2: number | null, quality: Spo2Quality) => void;
   /** Update optional emergency card medical fields for a patient. */
   updatePatientMedical: (patientId: string, fields: {
     bloodGroup?: BloodGroup;
@@ -66,6 +77,7 @@ export const useUnivolt = create<UnivoltState>((set, get) => ({
       signalQuality: result.signalQuality,
       respiratoryRate: result.respiratoryRate,
       spo2Estimate: result.spo2Estimate,
+      spo2Quality: result.spo2Quality,
       peakCount: result.peakCount,
       durationSec: result.durationSec,
       simulated,
@@ -107,6 +119,7 @@ export const useUnivolt = create<UnivoltState>((set, get) => ({
       signalQuality: 0,
       respiratoryRate: 0,
       spo2Estimate: Math.round(spo2),
+      spo2Quality: "manual" as const,
       peakCount: 0,
       durationSec: 0,
       simulated: false,
@@ -115,6 +128,24 @@ export const useUnivolt = create<UnivoltState>((set, get) => ({
     };
     const db = touchVisit(get().db, patientId, at);
     const next = { ...db, scans: [...db.scans, row] };
+    saveDb(next);
+    set({ db: next });
+  },
+  updateLatestVitalsSpo2: (patientId, spo2, quality) => {
+    const db = get().db;
+    const patientScans = db.scans
+      .map((scan, index) => ({ scan, index }))
+      .filter(({ scan }) => scan.patientId === patientId && (!scan.source || scan.source === "scan"))
+      .sort((a, b) => b.scan.capturedAt - a.scan.capturedAt);
+    const latest = patientScans[0];
+    if (!latest) return;
+    const scans = db.scans.slice();
+    scans[latest.index] = {
+      ...latest.scan,
+      spo2Estimate: spo2,
+      spo2Quality: quality,
+    };
+    const next = { ...db, scans };
     saveDb(next);
     set({ db: next });
   },

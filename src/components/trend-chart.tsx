@@ -47,7 +47,7 @@ export function TrendChart({ scans }: { scans: VitalsScan[] }) {
 }
 
 function OldSpark({ data, dataKey, color, label, unit }: {
-  data: { t: string; hr: number; rr: number; spo2: number }[];
+  data: { t: string; hr: number; rr: number; spo2: number | null }[];
   dataKey: "hr" | "rr" | "spo2";
   color: string;
   label: string;
@@ -104,18 +104,23 @@ export function RrChart({ scans, windowDays }: { scans: VitalsScan[]; windowDays
   return <SingleLineChart data={data} dataKey="rr" color="var(--color-warn)" unit="/min" label="/min" />;
 }
 
-/** SpO₂ chart from MANUAL entries only — camera rPPG spo2 is excluded for honesty. */
+/** SpO₂ chart from manual entries and accepted fingertip scans. */
 export function Spo2Chart({ scans, windowDays }: { scans: VitalsScan[]; windowDays: 7 | 30 }) {
   const [ready, setReady] = useState(false);
   useEffect(() => setReady(true), []);
   const cutoff = Date.now() - windowDays * 86_400_000;
-  const manual = scans.filter((s) => s.capturedAt >= cutoff && s.source === "manual");
+  const measured = scans.filter(
+    (s) =>
+      s.capturedAt >= cutoff &&
+      ((s.source === "manual" && s.spo2Estimate != null) ||
+        ((s.spo2Quality === "good" || s.spo2Quality === "weak") && s.spo2Estimate != null)),
+  );
   if (!ready) return <div className="h-20 rounded-[12px] bg-surface" />;
-  if (manual.length === 0) return null; // caller handles empty state
-  const data: Spo2Point[] = manual.map((s) => ({
+  if (measured.length === 0) return null; // caller handles empty state
+  const data: Spo2Point[] = measured.map((s) => ({
     t: format(s.capturedAt, "d MMM"),
-    spo2: s.spo2Estimate,
-    manual: true,
+    spo2: s.spo2Estimate as number,
+    manual: s.source === "manual",
   }));
   return <SingleLineChart data={data} dataKey="spo2" color="var(--color-moss)" unit="%" label="%" manualDots />;
 }

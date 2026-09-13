@@ -163,7 +163,7 @@ function migrate(raw: unknown): UnivoltDb {
   const scans = (Array.isArray(db.scans) ? db.scans : []).map((s) => ({
     ...s,
     respiratoryRate: s.respiratoryRate ?? 14,
-    spo2Estimate: s.spo2Estimate ?? 97,
+    spo2Estimate: s.spo2Estimate === null ? null : (s.spo2Estimate ?? 97),
     hrvRmssd: s.hrvRmssd ?? 28,
     signalQuality: s.signalQuality ?? 80,
     syncStatus: s.syncStatus ?? "local",

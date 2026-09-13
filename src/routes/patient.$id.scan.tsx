@@ -14,6 +14,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SCAN_DURATION_MS, useRppgScan, type Status } from "@/hooks/useRppgScan";
 import { selectPatient, useUnivolt } from "@/lib/univolt/store";
+import { getStrings } from "@/lib/translations";
+import { loadLocale } from "@/lib/vitalsDatabase";
 
 export const Route = createFileRoute("/patient/$id/scan")({ component: VitalsScanScreen });
 
@@ -34,6 +36,7 @@ export function VitalsScanScreen() {
   const db = useUnivolt((s) => s.db);
   const addVitalsScan = useUnivolt((s) => s.addVitalsScan);
   const patient = selectPatient(db, id);
+  const t = getStrings(loadLocale() ?? "en");
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const ppgCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -53,7 +56,7 @@ export function VitalsScanScreen() {
         hrvRmssd: result.hrv ?? 0,
         signalQuality: Math.round(result.confidence * 100),
         respiratoryRate: result.rr ?? 0,
-        spo2Estimate: 0, // face rPPG cannot measure SpO₂ — never fake it
+         spo2Estimate: null, // face rPPG cannot measure SpO₂ — never fake it
         peakCount: result.peakCount,
         durationSec: SCAN_DURATION_SEC,
         sampleRate: 30,
@@ -272,6 +275,13 @@ export function VitalsScanScreen() {
               </>
             )}
             <div className="mt-4 flex flex-col gap-2">
+              {detected ? (
+                <Button asChild variant="secondary" size="lg" className="w-full">
+                  <Link to="/patient/$id/spo2" params={{ id: patient.id }}>
+                    {t.spo2AddButton}
+                  </Link>
+                </Button>
+              ) : null}
               {detected ? (
                 <Button asChild className="w-full" size="lg">
                   <Link to="/patient/$id" params={{ id: patient.id }}>

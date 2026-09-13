@@ -177,7 +177,7 @@ function EmergencyCardScreen() {
         { ...patient, bloodGroup, allergies, conditions, currentMedication: medication },
         lastCam?.heartRate,
         lastCam?.respiratoryRate,
-        lastManual?.spo2Estimate,
+        lastManual?.spo2Estimate ?? undefined,
       )
     : null;
 

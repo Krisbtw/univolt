@@ -17,19 +17,61 @@ export interface RoiRect {
 /** Self-hosted MediaPipe assets — served from /public/, work offline after first load. */
 const WASM_BASE = "/mediapipe/wasm";
 const MODEL_URL = "/models/blaze_face_short_range.tflite";
+const LOAD_TIMEOUT_MS = 10_000;
 
 let detectorPromise: Promise<FaceDetector | null> | null = null;
 
-/** Loads the MediaPipe BlazeFace (short-range) detector once; resolves null on failure. */
+/** Last error message from the model loader — read via getLastModelError(). */
+let _lastModelError: string | null = null;
+/** Returns the most recent model-load error string (or null if none). */
+export function getLastModelError(): string | null {
+    return _lastModelError;
+}
+
+async function tryLoadOnce(): Promise<FaceDetector | null> {
+    const timeout = new Promise<null>((resolve) =>
+        setTimeout(() => resolve(null), LOAD_TIMEOUT_MS),
+    );
+    const load = (async (): Promise<FaceDetector | null> => {
+        try {
+            const fileset = await FilesetResolver.forVisionTasks(WASM_BASE);
+            return await FaceDetector.createFromModelPath(fileset, MODEL_URL);
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            console.error("[faceDetector] model load failed:", msg, err);
+            _lastModelError = msg;
+            return null;
+        }
+    })();
+    const result = await Promise.race([load, timeout]);
+    if (result === null && _lastModelError === null) {
+        // timed out without a JS error
+        _lastModelError = `Timed out after ${LOAD_TIMEOUT_MS} ms`;
+        console.error("[faceDetector] model load timed out after", LOAD_TIMEOUT_MS, "ms");
+    }
+    return result;
+}
+
+/**
+ * Loads the MediaPipe BlazeFace (short-range) detector once; resolves null on
+ * failure. Logs the exact error to console.error. Retries once after initial
+ * failure. Resolves within 2×LOAD_TIMEOUT_MS maximum so the caller never hangs
+ * indefinitely in "loading" state.
+ */
 export function loadFaceDetector(): Promise<FaceDetector | null> {
     if (detectorPromise === null) {
         detectorPromise = (async () => {
-            try {
-                const fileset = await FilesetResolver.forVisionTasks(WASM_BASE);
-                return await FaceDetector.createFromModelPath(fileset, MODEL_URL);
-            } catch {
-                return null; // model unavailable (first offline load) → caller uses skin-ROI heuristic
+            const first = await tryLoadOnce();
+            if (first !== null) {
+                _lastModelError = null; // clear any prior error on success
+                return first;
             }
+            // Retry once — a transient network hiccup during first load should not
+            // permanently condemn the session to skin-fallback mode.
+            console.info("[faceDetector] retrying model load…");
+            const second = await tryLoadOnce();
+            if (second !== null) _lastModelError = null;
+            return second;
         })();
     }
     return detectorPromise;
@@ -85,16 +127,22 @@ export function foreheadCheekRoi(box: FaceBox): RoiRect[] {
 /**
  * Fallback ROI when the face model is unavailable: YCbCr skin mask over the
  * center crop. Returns [] when no plausible skin region is found.
+ *
+ * Thresholds loosened for Phase-2 fix:
+ *   - Wider center crop (x 0.15–0.85, y 0.10–0.90)
+ *   - Looser YCbCr skin gate (Cb 77–130, Cr 130–180)
+ *   - Lower coverage threshold (4 % instead of 8 %)
+ *   - Smaller minimum bbox (8 % of frame size instead of 10 %)
  */
 export function skinRegionRoi(
     pixels: Uint8ClampedArray,
     width: number,
     height: number,
 ): RoiRect[] {
-    const x0 = Math.floor(width * 0.2);
-    const x1 = Math.floor(width * 0.8);
-    const y0 = Math.floor(height * 0.15);
-    const y1 = Math.floor(height * 0.85);
+    const x0 = Math.floor(width * 0.15);
+    const x1 = Math.floor(width * 0.85);
+    const y0 = Math.floor(height * 0.10);
+    const y1 = Math.floor(height * 0.90);
     let minX = Number.POSITIVE_INFINITY;
     let minY = Number.POSITIVE_INFINITY;
     let maxX = Number.NEGATIVE_INFINITY;
@@ -110,7 +158,7 @@ export function skinRegionRoi(
             const cb = 128 - 0.169 * r - 0.331 * g + 0.5 * b;
             const cr = 128 + 0.5 * r - 0.419 * g - 0.081 * b;
             total += 1;
-            if (cb >= 77 && cb <= 127 && cr >= 133 && cr <= 173) {
+            if (cb >= 77 && cb <= 130 && cr >= 130 && cr <= 180) {
                 count += 1;
                 if (x < minX) minX = x;
                 if (x > maxX) maxX = x;
@@ -119,8 +167,8 @@ export function skinRegionRoi(
             }
         }
     }
-    if (count < total * 0.08) return [];
-    if (maxX - minX < width * 0.1 || maxY - minY < height * 0.1) return [];
+    if (count < total * 0.04) return [];
+    if (maxX - minX < width * 0.08 || maxY - minY < height * 0.08) return [];
     return [
         {
             x: minX / width,

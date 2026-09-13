@@ -12,6 +12,7 @@ import {
     createFaceTracker,
     detectFace,
     foreheadCheekRoi,
+    getLastModelError,
     loadFaceDetector,
     skinRegionRoi,
     type RoiRect,
@@ -197,12 +198,26 @@ export interface UseRppgScanOptions {
     videoRef: RefObject<HTMLVideoElement | null>;
     ppgCanvasRef: RefObject<HTMLCanvasElement | null>;
 }
+
+/** Snapshot of internal state for the ?debug=1 overlay. */
+export interface DebugInfo {
+    modelState: "loading" | "ready" | "fallback";
+    modelError: string | null;
+    videoReadyState: number;
+    videoWidth: number;
+    videoHeight: number;
+    facesLastSec: number;
+    skinFallbackActive: boolean;
+    statusStr: string;
+}
+
 export interface UseRppgScanApi {
     state: RppgScanState;
     actions: {
         reset: () => void;
         requestCamera: () => void;
         releaseCamera: () => void;
+        getDebugInfo: () => DebugInfo;
     };
 }
 
@@ -232,6 +247,10 @@ export function useRppgScan({ videoRef, ppgCanvasRef }: UseRppgScanOptions): Use
     const faceLostSinceRef = useRef(0);
     const lowLightSinceRef = useRef(0);
     const motionStampsRef = useRef<number[]>([]);
+    // Debug HUD counters
+    const faceCountSecRef = useRef(0);   // faces detected in rolling 1-sec window
+    const faceStampsRef = useRef<number[]>([]); // timestamps of positive detections
+    const lastSkinFallbackRef = useRef(false); // did skin fallback yield a ROI last frame?
 
     // ---- camera lifecycle (front camera for face rPPG) ----
     const stopCamera = useCallback((): void => {
@@ -296,10 +315,30 @@ export function useRppgScan({ videoRef, ppgCanvasRef }: UseRppgScanOptions): Use
     }, [videoRef]);
 
     // On mount: request camera + load the face detector in parallel.
+    // A hard 10-second timeout transitions "loading"→"fallback" so the skin-ROI
+    // fallback activates even if the Promise stalls (e.g. WASM fetch hanging).
     useEffect(() => {
         let alive = true;
         void startCamera();
+
+        // Hard-timeout guard: if the model hasn't loaded in LOAD_TIMEOUT_MS×2
+        // (two attempts), flip to fallback so the UI is never stuck in "loading".
+        const FALLBACK_AFTER_MS = 22_000;
+        const fallbackTimer = setTimeout(() => {
+            if (!alive) return;
+            if (modelStateRef.current === "loading") {
+                console.warn(
+                    "[useRppgScan] model still loading after",
+                    FALLBACK_AFTER_MS,
+                    "ms — activating skin-ROI fallback",
+                );
+                modelStateRef.current = "fallback";
+                dispatch({ type: "STATUS", status: "model_fallback" });
+            }
+        }, FALLBACK_AFTER_MS);
+
         void loadFaceDetector().then((detector) => {
+            clearTimeout(fallbackTimer);
             if (!alive) return;
             detectorRef.current = detector;
             modelStateRef.current = detector === null ? "fallback" : "ready";
@@ -307,6 +346,7 @@ export function useRppgScan({ videoRef, ppgCanvasRef }: UseRppgScanOptions): Use
         });
         return () => {
             alive = false;
+            clearTimeout(fallbackTimer);
             stopCamera();
         };
     }, [startCamera, stopCamera]);
@@ -396,9 +436,24 @@ export function useRppgScan({ videoRef, ppgCanvasRef }: UseRppgScanOptions): Use
                 const tracked = trackerRef.current.update(rawFace);
                 if (tracked.box !== null) faceRois = foreheadCheekRoi(tracked.box);
                 moving = tracked.box !== null && tracked.motion > MOTION_PER_FRAME;
-            } else if (modelStateRef.current === "fallback") {
+            } else {
+                // Run skin-ROI fallback when modelState is "fallback" OR still
+                // "loading" — this prevents the "no face detected" dead-end
+                // during the ~12 MB WASM download.
                 faceRois = skinRegionRoi(pixels, PROCESS_W, PROCESS_H);
             }
+
+            // --- Debug HUD: track faces per second ---
+            const isSkinFallback = modelStateRef.current !== "ready";
+            lastSkinFallbackRef.current = isSkinFallback && faceRois.length > 0;
+            if (faceRois.length > 0) {
+                faceStampsRef.current.push(now);
+            }
+            // Purge stamps older than 1 s
+            while (faceStampsRef.current.length > 0 && now - faceStampsRef.current[0] > 1000) {
+                faceStampsRef.current.shift();
+            }
+            faceCountSecRef.current = faceStampsRef.current.length;
 
             if (faceRois.length === 0) {
                 if (faceLostSinceRef.current === 0) faceLostSinceRef.current = now;
@@ -565,9 +620,23 @@ export function useRppgScan({ videoRef, ppgCanvasRef }: UseRppgScanOptions): Use
         stopCamera();
     }, [stopCamera]);
 
+    const getDebugInfo = useCallback((): DebugInfo => {
+        const video = videoRef.current;
+        return {
+            modelState: modelStateRef.current,
+            modelError: getLastModelError(),
+            videoReadyState: video ? video.readyState : -1,
+            videoWidth: video ? video.videoWidth : 0,
+            videoHeight: video ? video.videoHeight : 0,
+            facesLastSec: faceCountSecRef.current,
+            skinFallbackActive: lastSkinFallbackRef.current,
+            statusStr: state.status,
+        };
+    }, [state.status, videoRef]);
+
     const api = useMemo(
-        () => ({ state, actions: { reset, requestCamera, releaseCamera } }),
-        [state, reset, requestCamera, releaseCamera],
+        () => ({ state, actions: { reset, requestCamera, releaseCamera, getDebugInfo } }),
+        [state, reset, requestCamera, releaseCamera, getDebugInfo],
     );
     return api;
 }

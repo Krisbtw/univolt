@@ -1,6 +1,6 @@
 import { SpeakerButton } from "@/components/communication/speaker-button";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { SCAN_DURATION_MS, useRppgScan, type Status } from "../hooks/useRppgScan";
+import { SCAN_DURATION_MS, useRppgScan, type DebugInfo, type Status } from "../hooks/useRppgScan";
 import { evaluateTriage, type TriageResult } from "../lib/triage";
 import { getStrings, type Locale, type Strings } from "../lib/translations";
 import { useFusionSession } from "../lib/fusionStore";
@@ -30,6 +30,23 @@ export function VitalsScanScreen() {
         () => (state.result === null ? null : evaluateTriage(state.result)),
         [state.result],
     );
+
+    // Debug HUD — toggled by ?debug=1 in the URL, never visible in normal demo
+    const [debugEnabled] = useState(() => {
+        try {
+            return new URLSearchParams(window.location.search).get("debug") === "1";
+        } catch {
+            return false;
+        }
+    });
+    const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null);
+    useEffect(() => {
+        if (!debugEnabled) return;
+        const id = setInterval(() => {
+            setDebugInfo(actions.getDebugInfo());
+        }, 250);
+        return () => clearInterval(id);
+    }, [debugEnabled, actions]);
 
     const setRppg = useFusionSession((s) => s.setRppg);
 
@@ -160,6 +177,9 @@ export function VitalsScanScreen() {
                         </div>
                     )}
                     <canvas ref={ppgCanvasRef} style={ppgCanvasStyle} />
+                    {debugEnabled && debugInfo !== null && (
+                        <DebugHud info={debugInfo} />
+                    )}
                     {showPermissionFallback && (
                         <PermissionFallback
                             t={t}
@@ -278,6 +298,50 @@ export function VitalsScanScreen() {
         </div>
     );
 }
+
+// ---------- Debug HUD (only rendered when ?debug=1) ----------
+interface DebugHudProps { info: DebugInfo; }
+function DebugHud({ info }: DebugHudProps) {
+    const modelColor =
+        info.modelState === "ready" ? "#4ade80" :
+        info.modelState === "fallback" ? "#fbbf24" : "#f87171";
+    return (
+        <div style={debugHudStyle}>
+            <span style={{ color: modelColor }}>
+                model:{info.modelState}
+            </span>
+            {info.modelError && (
+                <span style={{ color: "#f87171" }}>err:{info.modelError.slice(0, 60)}</span>
+            )}
+            <span>
+                video:{info.videoReadyState} {info.videoWidth}×{info.videoHeight}
+            </span>
+            <span style={{ color: info.facesLastSec > 0 ? "#4ade80" : "#f87171" }}>
+                faces/s:{info.facesLastSec}
+            </span>
+            <span style={{ color: info.skinFallbackActive ? "#fbbf24" : "#64748b" }}>
+                skin:{info.skinFallbackActive ? "ROI✓" : "none"}
+            </span>
+            <span>status:{info.statusStr}</span>
+        </div>
+    );
+}
+const debugHudStyle: CSSProperties = {
+    position: "absolute",
+    bottom: 104,
+    left: 0,
+    right: 0,
+    padding: "4px 8px",
+    display: "flex",
+    flexDirection: "column",
+    gap: 2,
+    background: "rgba(2,6,23,0.85)",
+    fontFamily: "monospace",
+    fontSize: 11,
+    color: "#94a3b8",
+    pointerEvents: "none",
+    zIndex: 10,
+};
 
 // ---------- sub-components (all copy comes from translations.ts) ----------
 // Feature 4: metric icons

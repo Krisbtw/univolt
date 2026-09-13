@@ -4,11 +4,12 @@ import {
   useMemo,
   useRef,
   useState,
-  type CSSProperties,
 } from "react";
 import QRCode from "qrcode";
 import { Link } from "@tanstack/react-router";
-import { evaluateFusion } from "../lib/fusionEngine";
+import { AppFrame, AppHeader } from "@/components/app-shell";
+import { Button } from "@/components/ui/button";
+import { evaluateFusion, type FusionLevel, type FusionInputs } from "../lib/fusionEngine";
 import { useFusionSession } from "../lib/fusionStore";
 import {
   buildSlipPayload,
@@ -17,34 +18,62 @@ import {
   type SlipPayload,
 } from "../lib/referralSlip";
 import { makeId } from "../lib/vitalsDatabase";
+import { selectPatient, selectScans, useUnivolt } from "@/lib/univolt/store";
 
 // ── Session ID (stable for the lifetime of this component mount) ─────────────
 const SESSION_ID = makeId();
 
 // ── Level display helpers ─────────────────────────────────────────────────────
 
-const LEVEL_META: Record<string, { label: string; color: string; emoji: string }> = {
-  urgent:            { label: "URGENT — Go now",       color: "#f87171", emoji: "🚨" },
-  phc_today:         { label: "Visit PHC today",       color: "#fbbf24", emoji: "⚠️" },
-  self_care:         { label: "Self-care at home",     color: "#4ade80", emoji: "✅" },
-  insufficient_data: { label: "Insufficient data",     color: "#94a3b8", emoji: "ℹ️" },
+const LEVEL_META: Record<
+  string,
+  { label: string; bgClass: string; textClass: string; borderClass: string; emoji: string }
+> = {
+  urgent: {
+    label: "URGENT — Hospital / Emergency",
+    bgClass: "bg-red-500/10",
+    textClass: "text-red-700 dark:text-red-400",
+    borderClass: "border-red-500/30",
+    emoji: "🚨",
+  },
+  phc_today: {
+    label: "Visit PHC Today",
+    bgClass: "bg-amber-500/10",
+    textClass: "text-amber-800 dark:text-amber-400",
+    borderClass: "border-amber-500/30",
+    emoji: "⚠️",
+  },
+  self_care: {
+    label: "Routine / Self-Care at Home",
+    bgClass: "bg-emerald-500/10",
+    textClass: "text-emerald-800 dark:text-emerald-400",
+    borderClass: "border-emerald-500/30",
+    emoji: "✅",
+  },
+  insufficient_data: {
+    label: "Insufficient Data",
+    bgClass: "bg-surface",
+    textClass: "text-muted",
+    borderClass: "border-line",
+    emoji: "ℹ️",
+  },
 };
 
 const REASON_LABELS: Record<string, string> = {
-  bpm_extreme:       "HR > 150 bpm",
-  shock_pattern:     "Fast HR + prolonged CRT",
-  chest_pain:        "Chest pain",
-  fainting:          "Fainting",
-  bleeding:          "Active bleeding",
-  fet_obstruction:   "FET > 6 s (airway obstruction)",
-  tachycardia:       "HR > 100 bpm",
-  bradycardia:       "HR < 50 bpm",
-  tachypnea:         "RR > 24 /min",
-  crt_elevated:      "CRT 3–5 s",
+  bpm_extreme: "HR > 150 bpm",
+  shock_pattern: "Fast HR + prolonged CRT",
+  chest_pain: "Chest pain",
+  fainting: "Fainting",
+  bleeding: "Active bleeding",
+  fet_obstruction: "FET > 6 s (airway obstruction)",
+  tachycardia: "HR > 100 bpm",
+  bradycardia: "HR < 50 bpm",
+  tachypnea: "RR > 24 /min",
+  crt_elevated: "CRT 3–5 s",
   pregnant_abnormal: "Pregnancy + abnormal signal",
-  fever_3d:          "Fever ≥ 3 days",
-  breathless:        "Breathlessness",
-  all_normal:        "All signals in normal range",
+  fever_3d: "Fever ≥ 3 days",
+  breathless: "Breathlessness",
+  all_normal: "All signals in normal range",
 };
 
 function reasonLabel(code: string): string {
@@ -62,7 +91,69 @@ function fmtTime(ts: number): string {
 
 export function ReferralScreen() {
   const session = useFusionSession();
-  const fusion = useMemo(() => evaluateFusion(session), [session]);
+  const db = useUnivolt((s) => s.db);
+
+  // Check URL search for patientId (e.g. from patient profile link)
+  const patientId = useMemo(() => {
+    try {
+      if (typeof window === "undefined") return undefined;
+      return new URLSearchParams(window.location.search).get("patientId") || undefined;
+    } catch {
+      return undefined;
+    }
+  }, []);
+
+  const patient = useMemo(() => {
+    return patientId ? selectPatient(db, patientId) : null;
+  }, [db, patientId]);
+
+  const patientScans = useMemo(() => {
+    return patient ? selectScans(db, patient.id) : [];
+  }, [db, patient]);
+
+  // Combine session or patient data into fusion inputs
+  const fusionInputs = useMemo((): FusionInputs => {
+    if (!patient) return session;
+
+    const cameraScans = patientScans.filter((s) => s.source !== "manual");
+    const manualScans = patientScans.filter((s) => s.source === "manual");
+    const lastScan = cameraScans[cameraScans.length - 1] ?? null;
+    const lastManualScan = manualScans[manualScans.length - 1] ?? null;
+    const cameraSpo2 =
+      lastScan?.spo2Quality === "good" || lastScan?.spo2Quality === "weak"
+        ? lastScan.spo2Estimate
+        : null;
+    const latestSpo2 = cameraSpo2 ?? lastManualScan?.spo2Estimate ?? null;
+
+    return {
+      ...session,
+      ageYears: session.ageYears ?? patient.age,
+      rppg:
+        session.rppg ??
+        (lastScan
+          ? {
+              bpm: lastScan.heartRate,
+              rr: lastScan.respiratoryRate,
+              hrv: lastScan.hrvRmssd,
+              quality: (lastScan.signalQuality > 50 ? "good" : "weak") as "good" | "weak",
+            }
+          : undefined),
+      spo2:
+        session.spo2 ??
+        (latestSpo2 != null
+          ? {
+              value: latestSpo2,
+              quality: (lastScan?.spo2Quality ?? "good") as
+                | "good"
+                | "weak"
+                | "reject"
+                | "manual",
+            }
+          : undefined),
+    };
+  }, [session, patient, patientScans]);
+
+  const fusion = useMemo(() => evaluateFusion(fusionInputs), [fusionInputs]);
   const [scanMode, setScanMode] = useState(false);
   const [decoded, setDecoded] = useState<SlipPayload | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
@@ -72,12 +163,15 @@ export function ReferralScreen() {
   // Print card ref
   const cardRef = useRef<HTMLDivElement | null>(null);
 
-  const hasData = fusion.signalsUsed > 0 || (session.symptoms && Object.values(session.symptoms).some(Boolean));
+  const hasData =
+    fusion.signalsUsed > 0 ||
+    Boolean(fusionInputs.symptoms && Object.values(fusionInputs.symptoms).some(Boolean)) ||
+    fusion.reasons.length > 0;
 
   const payload = useMemo(() => {
     if (!hasData) return null;
-    return buildSlipPayload(session, fusion.level, fusion.reasons, SESSION_ID);
-  }, [session, fusion, hasData]);
+    return buildSlipPayload(fusionInputs, fusion.level, fusion.reasons, SESSION_ID);
+  }, [fusionInputs, fusion, hasData]);
 
   const payloadJson = payload ? JSON.stringify(payload) : null;
   const byteLen = payload ? payloadByteLength(payload) : 0;
@@ -89,7 +183,11 @@ export function ReferralScreen() {
     QRCode.toCanvas(canvas, payloadJson, {
       errorCorrectionLevel: "M",
       margin: 2,
-      width: 240,
+      width: 220,
+      color: {
+        dark: "#145c4c",
+        light: "#ffffff",
+      },
     }).catch((err) => console.warn("[QR] render error:", err));
   }, [payloadJson]);
 
@@ -115,11 +213,17 @@ export function ReferralScreen() {
   const scanVideoRef = useRef<HTMLVideoElement | null>(null);
   const scanStreamRef = useRef<MediaStream | null>(null);
   const scanIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const barcodeDetectorRef = useRef<BarcodeDetector | null>(null);
+  const barcodeDetectorRef = useRef<any | null>(null);
 
   const stopScan = useCallback(() => {
-    if (scanIntervalRef.current) { clearInterval(scanIntervalRef.current); scanIntervalRef.current = null; }
-    if (scanStreamRef.current) { scanStreamRef.current.getTracks().forEach(t => t.stop()); scanStreamRef.current = null; }
+    if (scanIntervalRef.current) {
+      clearInterval(scanIntervalRef.current);
+      scanIntervalRef.current = null;
+    }
+    if (scanStreamRef.current) {
+      scanStreamRef.current.getTracks().forEach((t) => t.stop());
+      scanStreamRef.current = null;
+    }
     if (scanVideoRef.current) scanVideoRef.current.srcObject = null;
   }, []);
 
@@ -133,13 +237,17 @@ export function ReferralScreen() {
     setScanError(null);
     setDecoded(null);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+        audio: false,
+      });
       scanStreamRef.current = stream;
       if (scanVideoRef.current) {
         scanVideoRef.current.srcObject = stream;
         scanVideoRef.current.play().catch(() => {});
       }
-      barcodeDetectorRef.current = new BarcodeDetector({ formats: ["qr_code"] });
+      const DetectorClass = (window as any).BarcodeDetector;
+      barcodeDetectorRef.current = new DetectorClass({ formats: ["qr_code"] });
       scanIntervalRef.current = setInterval(async () => {
         const video = scanVideoRef.current;
         const detector = barcodeDetectorRef.current;
@@ -165,149 +273,289 @@ export function ReferralScreen() {
     }
   }, [stopScan]);
 
-  const lm = payload ? LEVEL_META[fusion.level]! : null;
+  const lm = payload ? LEVEL_META[fusion.level] ?? LEVEL_META.insufficient_data : null;
 
   return (
-    <div style={screenStyle}>
+    <AppFrame>
       <style>{PRINT_CSS}</style>
-      <div style={wrapStyle}>
-        {/* Header */}
-        <div style={headerRowStyle}>
-          <h1 style={titleStyle}>📋 Referral Slip</h1>
-          <Link to={"/fusion" as any} style={navLinkStyle}>← Triage</Link>
-        </div>
+      <AppHeader
+        back={
+          patientId
+            ? { to: "/patient/$id", params: { id: patientId } }
+            : { to: "/" }
+        }
+        title="Referral Slip"
+        subtitle="Offline QR clinical handoff"
+      />
 
-        {/* No data */}
+      <main className="flex flex-1 flex-col gap-4 px-4 pb-12 pt-4">
+        {/* No data state */}
         {!hasData && (
-          <div style={noDataCardStyle}>
-            <p style={noDataTextStyle}>
-              ℹ️ Complete at least one test (rPPG scan, FET, or CRT) before generating a referral.
+          <div className="rounded-[24px] border border-line bg-paper p-6 text-center flex flex-col items-center gap-3">
+            <div className="size-12 rounded-full bg-surface flex items-center justify-center text-xl">
+              ℹ️
+            </div>
+            <h2 className="font-display text-base font-semibold text-ink">
+              No Triage Signals Recorded
+            </h2>
+            <p className="text-xs text-muted leading-relaxed max-w-[280px]">
+              Complete at least one vital scan, breathing test, or select an existing patient to generate an offline referral slip.
             </p>
-            <Link to={("/scan") as any} style={ctaLinkStyle}>Go to vitals scan →</Link>
+            <div className="flex flex-col gap-2 w-full pt-2">
+              <Link to="/scan" className="w-full">
+                <Button className="w-full" variant="default">
+                  📹 Go to Vitals Scan
+                </Button>
+              </Link>
+              <Link to="/" className="w-full">
+                <Button className="w-full" variant="secondary">
+                  👥 View Patient Roster
+                </Button>
+              </Link>
+            </div>
           </div>
         )}
 
-        {/* Referral card (printable) */}
+        {/* Printable referral card */}
         {hasData && payload && lm && (
           <>
-            <div ref={cardRef} id="referral-card" style={cardStyle}>
-              {/* Level header */}
-              <div style={{ ...levelBannerStyle, background: lm.color + "18", border: `1px solid ${lm.color}44` }}>
-                <span style={{ fontSize: 28 }}>{lm.emoji}</span>
-                <div>
-                  <p style={{ margin: 0, fontWeight: 700, fontSize: 18, color: lm.color }}>{lm.label}</p>
-                  <p style={{ margin: "2px 0 0", fontSize: 12, color: "#64748b" }}>
-                    Case {payload.id} · {fmtTime(payload.ts)}
+            <div
+              ref={cardRef}
+              id="referral-card"
+              className="rounded-[24px] border border-line bg-paper p-5 shadow-sm flex flex-col gap-4 text-ink"
+            >
+              {/* Level banner */}
+              <div
+                className={`flex items-center gap-3.5 rounded-[16px] p-3.5 border ${lm.bgClass} ${lm.borderClass} ${lm.textClass}`}
+              >
+                <span className="text-3xl leading-none">{lm.emoji}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-display text-base font-bold leading-tight">
+                      {lm.label}
+                    </p>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-paper/80 border border-current/20">
+                      Case {payload.id}
+                    </span>
+                  </div>
+                  <p className="text-[11px] opacity-80 mt-0.5">
+                    Issued {fmtTime(payload.ts)}
                   </p>
                 </div>
               </div>
 
-              {/* Vitals */}
-              <div style={cardSectionStyle}>
-                <p style={cardHeadStyle}>Vitals</p>
-                <div style={vitalsGridStyle}>
-                  {payload.bpm != null && <VitalChip label="HR" value={`${payload.bpm} bpm`} />}
-                  {payload.rr  != null && <VitalChip label="RR" value={`${payload.rr} /min`} />}
-                  {payload.crt != null && <VitalChip label="CRT" value={`${payload.crt} s`} />}
-                  {payload.fet != null && <VitalChip label="FET" value={`${payload.fet} s`} />}
-                  {payload.age != null && <VitalChip label="Age" value={`${payload.age} yr`} />}
-                  {payload.preg && <VitalChip label="Preg" value="Yes" />}
+              {/* Patient info if linked */}
+              {patient && (
+                <div className="rounded-[16px] border border-line bg-surface/60 p-3 flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-xs font-bold text-ink">{patient.name}</p>
+                    <p className="text-[11px] text-muted">
+                      {patient.age}y · {patient.sex === "F" ? "Female" : patient.sex === "M" ? "Male" : "Other"} {patient.village ? `· ${patient.village}` : ""}
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted bg-paper px-2 py-1 rounded-[8px] border border-line">
+                    {patient.caseId}
+                  </span>
+                </div>
+              )}
+
+              {/* Vitals summary */}
+              <div className="flex flex-col gap-1.5">
+                <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted">
+                  Recorded Vitals
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {payload.bpm != null && (
+                    <VitalChip label="HR" value={`${payload.bpm} bpm`} />
+                  )}
+                  {payload.rr != null && (
+                    <VitalChip label="RR" value={`${payload.rr} /min`} />
+                  )}
+                  {fusionInputs.spo2?.value != null && (
+                    <VitalChip label="SpO₂" value={`${fusionInputs.spo2.value}%`} />
+                  )}
+                  {payload.crt != null && (
+                    <VitalChip label="CRT" value={`${payload.crt} s`} />
+                  )}
+                  {payload.fet != null && (
+                    <VitalChip label="FET" value={`${payload.fet} s`} />
+                  )}
+                  {payload.age != null && (
+                    <VitalChip label="Age" value={`${payload.age} yr`} />
+                  )}
+                  {payload.preg && (
+                    <VitalChip label="Pregnancy" value="Yes" />
+                  )}
                 </div>
               </div>
 
-              {/* Reasons */}
+              {/* Clinical reasons */}
               {payload.rsn.length > 0 && (
-                <div style={cardSectionStyle}>
-                  <p style={cardHeadStyle}>Clinical reasons</p>
-                  <ul style={reasonListStyle}>
-                    {payload.rsn.map(r => (
-                      <li key={r} style={reasonItemStyle}>• {reasonLabel(r)}</li>
+                <div className="flex flex-col gap-1.5">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted">
+                    Clinical Reasons
+                  </p>
+                  <ul className="flex flex-col gap-1.5 rounded-[16px] border border-line bg-surface/50 p-3">
+                    {payload.rsn.map((r) => (
+                      <li key={r} className="flex items-center gap-2 text-xs font-medium text-ink">
+                        <span className="size-1.5 rounded-full bg-pine shrink-0" />
+                        {reasonLabel(r)}
+                      </li>
                     ))}
                   </ul>
                 </div>
               )}
 
-              {/* QR */}
-              <div style={qrWrapStyle}>
-                <canvas ref={qrCanvasRef} style={{ borderRadius: 8 }} />
-                <p style={qrNoteStyle}>{byteLen} bytes · scan at PHC to decode</p>
+              {/* QR Code */}
+              <div className="flex flex-col items-center gap-2 pt-2 border-t border-line/60">
+                <div className="p-3 bg-white rounded-[16px] border border-line/80 shadow-inner">
+                  <canvas ref={qrCanvasRef} className="block size-[220px]" />
+                </div>
+                <p className="text-[11px] text-muted text-center font-medium">
+                  {byteLen} bytes · Scan at Primary Health Centre (PHC) to import
+                </p>
               </div>
 
-              <p style={cardDisclaimerStyle}>
-                Not a medical device. For screening only — confirm at the PHC with clinical assessment.
-                No personal identifying data stored.
+              <p className="text-[10px] text-muted text-center leading-relaxed">
+                Not a medical diagnosis device. For field screening & referral handoff only. Confirm at the PHC with full clinical assessment.
               </p>
             </div>
 
             {/* Action buttons */}
-            <div style={actionRowStyle}>
-              <button id="btn-referral-print" style={primaryBtnStyle} onClick={handlePrint}>🖨️ Print slip</button>
-              <button id="btn-referral-download" style={secondaryBtnStyle} onClick={handleDownload}>⬇️ Download PNG</button>
-              <button
+            <div className="flex flex-col gap-2">
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  id="btn-referral-print"
+                  variant="default"
+                  onClick={handlePrint}
+                  className="w-full gap-1.5 text-xs font-semibold"
+                >
+                  🖨️ Print Slip
+                </Button>
+                <Button
+                  id="btn-referral-download"
+                  variant="secondary"
+                  onClick={handleDownload}
+                  className="w-full gap-1.5 text-xs font-semibold"
+                >
+                  ⬇️ Save PNG
+                </Button>
+              </div>
+              <Button
                 id="btn-referral-scan"
-                style={secondaryBtnStyle}
-                onClick={() => { setScanMode(!scanMode); if (!scanMode) startScan(); else stopScan(); }}
+                variant="outline"
+                onClick={() => {
+                  setScanMode(!scanMode);
+                  if (!scanMode) startScan();
+                  else stopScan();
+                }}
+                className="w-full gap-1.5 text-xs font-semibold"
               >
-                📷 Scan QR code
-              </button>
+                📷 {scanMode ? "Close Scanner" : "Scan Patient QR Code"}
+              </Button>
             </div>
 
-            {/* Health schemes link */}
-            <div style={{ textAlign: "center", marginTop: 8 }}>
-              <Link to="/schemes" style={{ color: "#34d399", fontSize: 13, textDecoration: "underline", fontWeight: 600 }}>
+            {/* Navigation links */}
+            <div className="flex flex-col items-center gap-2 pt-2 text-center">
+              <Link
+                to="/schemes"
+                className="text-xs font-semibold text-pine hover:underline"
+              >
                 See applicable government health schemes →
+              </Link>
+              <Link
+                to="/fusion"
+                className="text-xs font-medium text-muted hover:text-ink"
+              >
+                ← Triage Questionnaire & Multimodal Tests
               </Link>
             </div>
           </>
         )}
 
-        {/* Scan mode */}
+        {/* Scan mode camera view */}
         {scanMode && (
-          <div style={scanCardStyle}>
-            <p style={scanInstructStyle}>Point camera at patient's referral QR code to decode it.</p>
+          <div className="rounded-[20px] border border-line bg-paper p-4 flex flex-col gap-3">
+            <p className="text-xs font-medium text-ink">
+              Point camera at patient's referral QR code to decode it.
+            </p>
             {scanError === "unsupported" && (
-              <p style={{ color: "#fbbf24", fontSize: 13 }}>
+              <p className="text-xs text-amber-600 bg-amber-500/10 p-2.5 rounded-[10px] border border-amber-500/20">
                 QR scanning is not supported in this browser. Use your camera app to scan instead.
               </p>
             )}
             {scanError === "camera_denied" && (
-              <p style={{ color: "#f87171", fontSize: 13 }}>Camera access denied. Please grant permission.</p>
+              <p className="text-xs text-red-600 bg-red-500/10 p-2.5 rounded-[10px] border border-red-500/20">
+                Camera access denied. Please grant permission in your browser settings.
+              </p>
             )}
-            <video ref={scanVideoRef} autoPlay playsInline muted style={scanVideoStyle} />
-            <button style={secondaryBtnStyle} onClick={() => { stopScan(); setScanMode(false); }}>Cancel</button>
+            <video
+              ref={scanVideoRef}
+              autoPlay
+              playsInline
+              muted
+              className="w-full aspect-[4/3] rounded-[14px] bg-black object-cover"
+            />
+            <Button
+              variant="secondary"
+              onClick={() => {
+                stopScan();
+                setScanMode(false);
+              }}
+              className="w-full text-xs"
+            >
+              Cancel Scan
+            </Button>
           </div>
         )}
 
-        {/* Decoded handoff card */}
+        {/* Decoded QR handoff card */}
         {decoded && (
-          <div style={decodedCardStyle}>
-            <p style={cardHeadStyle}>📋 Patient Handoff Card</p>
-            <p style={{ margin: 0, fontSize: 13, color: "#94a3b8" }}>
-              Case {decoded.id} · {fmtTime(decoded.ts)}
-            </p>
-            <div style={{ ...levelBannerStyle, background: LEVEL_META[decoded.lvl]!.color + "18", border: `1px solid ${LEVEL_META[decoded.lvl]!.color}44`, marginTop: 10 }}>
-              <span style={{ fontSize: 24 }}>{LEVEL_META[decoded.lvl]!.emoji}</span>
-              <p style={{ margin: 0, fontWeight: 700, color: LEVEL_META[decoded.lvl]!.color }}>
-                {LEVEL_META[decoded.lvl]!.label}
+          <div className="rounded-[20px] border border-line bg-paper p-4 flex flex-col gap-3 text-ink">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted">
+                📋 Decoded Handoff Card
               </p>
+              <span className="text-[10px] text-muted font-medium">
+                Case {decoded.id} · {fmtTime(decoded.ts)}
+              </span>
             </div>
-            <div style={vitalsGridStyle}>
-              {decoded.bpm != null && <VitalChip label="HR"  value={`${decoded.bpm} bpm`} />}
-              {decoded.rr  != null && <VitalChip label="RR"  value={`${decoded.rr} /min`} />}
+
+            {(() => {
+              const dlm = LEVEL_META[decoded.lvl] ?? LEVEL_META.insufficient_data;
+              return (
+                <div
+                  className={`flex items-center gap-3 rounded-[12px] p-3 border ${dlm.bgClass} ${dlm.borderClass} ${dlm.textClass}`}
+                >
+                  <span className="text-2xl">{dlm.emoji}</span>
+                  <p className="text-sm font-bold">{dlm.label}</p>
+                </div>
+              );
+            })()}
+
+            <div className="grid grid-cols-3 gap-2">
+              {decoded.bpm != null && <VitalChip label="HR" value={`${decoded.bpm} bpm`} />}
+              {decoded.rr != null && <VitalChip label="RR" value={`${decoded.rr} /min`} />}
               {decoded.crt != null && <VitalChip label="CRT" value={`${decoded.crt} s`} />}
               {decoded.fet != null && <VitalChip label="FET" value={`${decoded.fet} s`} />}
               {decoded.age != null && <VitalChip label="Age" value={`${decoded.age} yr`} />}
               {decoded.preg && <VitalChip label="Preg" value="Yes" />}
             </div>
+
             {decoded.rsn.length > 0 && (
-              <ul style={reasonListStyle}>
-                {decoded.rsn.map(r => <li key={r} style={reasonItemStyle}>• {reasonLabel(r)}</li>)}
+              <ul className="flex flex-col gap-1 rounded-[12px] border border-line bg-surface/50 p-2.5">
+                {decoded.rsn.map((r) => (
+                  <li key={r} className="text-xs text-muted flex items-center gap-1.5">
+                    <span className="size-1 rounded-full bg-pine shrink-0" />
+                    {reasonLabel(r)}
+                  </li>
+                ))}
               </ul>
             )}
           </div>
         )}
-      </div>
-    </div>
+      </main>
+    </AppFrame>
   );
 }
 
@@ -315,9 +563,11 @@ export function ReferralScreen() {
 
 function VitalChip({ label, value }: { label: string; value: string }) {
   return (
-    <div style={vitalChipStyle}>
-      <span style={{ fontSize: 10, color: "#64748b", fontWeight: 600 }}>{label}</span>
-      <span style={{ fontSize: 15, fontWeight: 700, color: "#e2e8f0" }}>{value}</span>
+    <div className="rounded-[12px] border border-line bg-surface p-2 flex flex-col gap-0.5">
+      <span className="text-[10px] font-bold uppercase tracking-wider text-muted">
+        {label}
+      </span>
+      <span className="text-xs font-bold text-ink">{value}</span>
     </div>
   );
 }
@@ -326,37 +576,26 @@ function VitalChip({ label, value }: { label: string; value: string }) {
 
 const PRINT_CSS = `
 @media print {
-  body > * { display: none !important; }
-  #referral-card { display: block !important; color: #000 !important; background: #fff !important; }
-  button, a, video { display: none !important; }
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  header, button, a, video, [data-preview-host] {
+    display: none !important;
+  }
+  #referral-card {
+    display: block !important;
+    max-width: 480px !important;
+    margin: 0 auto !important;
+    padding: 16px !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid #cccccc !important;
+    box-shadow: none !important;
+  }
+  #referral-card * {
+    color: #000000 !important;
+    background-color: transparent !important;
+  }
 }
 `;
-
-// ── Styles ────────────────────────────────────────────────────────────────────
-
-const screenStyle: CSSProperties = { minHeight: "100vh", background: "#0b1120", color: "#e2e8f0", fontFamily: 'system-ui,"Segoe UI",sans-serif', padding: "20px 16px 48px", boxSizing: "border-box" };
-const wrapStyle: CSSProperties = { maxWidth: 640, margin: "0 auto", display: "flex", flexDirection: "column", gap: 16 };
-const headerRowStyle: CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 };
-const titleStyle: CSSProperties = { margin: 0, fontSize: 20, fontWeight: 700 };
-const navLinkStyle: CSSProperties = { color: "#34d399", fontSize: 13, textDecoration: "none" };
-const noDataCardStyle: CSSProperties = { background: "#0f172a", border: "1px solid #1e293b", borderRadius: 12, padding: "18px", display: "flex", flexDirection: "column", gap: 12 };
-const noDataTextStyle: CSSProperties = { margin: 0, fontSize: 14, color: "#94a3b8" };
-const ctaLinkStyle: CSSProperties = { background: "rgba(52,211,153,0.10)", border: "1px solid rgba(52,211,153,0.3)", color: "#34d399", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 600, textDecoration: "none", textAlign: "center" };
-const cardStyle: CSSProperties = { background: "#0f172a", border: "1px solid #1e293b", borderRadius: 14, padding: "20px", display: "flex", flexDirection: "column", gap: 14 };
-const levelBannerStyle: CSSProperties = { borderRadius: 10, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 };
-const cardSectionStyle: CSSProperties = { display: "flex", flexDirection: "column", gap: 6 };
-const cardHeadStyle: CSSProperties = { margin: 0, fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.07em" };
-const vitalsGridStyle: CSSProperties = { display: "flex", flexWrap: "wrap", gap: 8 };
-const vitalChipStyle: CSSProperties = { background: "#020617", border: "1px solid #1e293b", borderRadius: 8, padding: "7px 12px", display: "flex", flexDirection: "column", gap: 2, minWidth: 70 };
-const reasonListStyle: CSSProperties = { margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 4 };
-const reasonItemStyle: CSSProperties = { fontSize: 13, color: "#cbd5e1" };
-const qrWrapStyle: CSSProperties = { display: "flex", flexDirection: "column", alignItems: "center", gap: 6 };
-const qrNoteStyle: CSSProperties = { margin: 0, fontSize: 11, color: "#475569" };
-const cardDisclaimerStyle: CSSProperties = { margin: 0, fontSize: 10, color: "#475569", textAlign: "center" };
-const actionRowStyle: CSSProperties = { display: "flex", flexWrap: "wrap", gap: 10 };
-const primaryBtnStyle: CSSProperties = { flex: 1, minWidth: 140, background: "rgba(52,211,153,0.15)", border: "1px solid rgba(52,211,153,0.4)", color: "#34d399", borderRadius: 12, padding: "13px 16px", fontSize: 14, fontWeight: 700, cursor: "pointer" };
-const secondaryBtnStyle: CSSProperties = { flex: 1, minWidth: 120, background: "transparent", border: "1px solid #334155", color: "#94a3b8", borderRadius: 12, padding: "13px 16px", fontSize: 14, fontWeight: 600, cursor: "pointer" };
-const scanCardStyle: CSSProperties = { background: "#0f172a", border: "1px solid #1e293b", borderRadius: 12, padding: "16px", display: "flex", flexDirection: "column", gap: 12 };
-const scanInstructStyle: CSSProperties = { margin: 0, fontSize: 14, color: "#e2e8f0" };
-const scanVideoStyle: CSSProperties = { width: "100%", borderRadius: 8, background: "#000" };
-const decodedCardStyle: CSSProperties = { background: "#0f172a", border: "1px solid #1e293b", borderRadius: 12, padding: "16px 18px", display: "flex", flexDirection: "column", gap: 10 };

@@ -680,7 +680,12 @@ function PatientProfileScreen() {
                 </Link>
               )}
 
-              <Link to="/referral" className="text-[11px] font-medium text-muted hover:text-ink">
+              <Link
+                id="link-referral-slip"
+                to="/referral"
+                search={{ patientId: patient.id }}
+                className="text-[11px] font-medium text-muted hover:text-ink"
+              >
                 Referral slip →
               </Link>
             </div>

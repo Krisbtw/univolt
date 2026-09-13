@@ -1,32 +1,72 @@
-import { useRef, type CSSProperties } from "react";
+import { useRef } from "react";
 import { Link } from "@tanstack/react-router";
+import { AppFrame, AppHeader } from "@/components/app-shell";
+import { Button } from "@/components/ui/button";
 import { useFetTest } from "../hooks/useFetTest";
 import { classifyFet, type FetClassification } from "../lib/breathAudioEngine";
 import type { FetPhase } from "../hooks/useFetTest";
 
 // ── Classification display ────────────────────────────────────────────────────
 
-function classLabel(c: FetClassification): { label: string; color: string; emoji: string } {
+function classConfig(c: FetClassification): {
+  label: string;
+  bgClass: string;
+  textClass: string;
+  borderClass: string;
+  emoji: string;
+} {
   switch (c) {
-    case "normal":       return { label: "Normal (< 4 s)",              color: "#4ade80", emoji: "✅" };
-    case "borderline":   return { label: "Borderline (4–6 s)",          color: "#fbbf24", emoji: "⚠️" };
-    case "obstruction":  return { label: "Possible obstruction (> 6 s)", color: "#f87171", emoji: "🚨" };
-    case "reject":       return { label: "Unable to detect",            color: "#64748b", emoji: "❌" };
+    case "normal":
+      return {
+        label: "Normal (< 4 s)",
+        bgClass: "bg-emerald-500/10",
+        textClass: "text-emerald-800 dark:text-emerald-400",
+        borderClass: "border-emerald-500/30",
+        emoji: "✅",
+      };
+    case "borderline":
+      return {
+        label: "Borderline (4–6 s)",
+        bgClass: "bg-amber-500/10",
+        textClass: "text-amber-800 dark:text-amber-400",
+        borderClass: "border-amber-500/30",
+        emoji: "⚠️",
+      };
+    case "obstruction":
+      return {
+        label: "Possible obstruction (> 6 s)",
+        bgClass: "bg-red-500/10",
+        textClass: "text-red-700 dark:text-red-400",
+        borderClass: "border-red-500/30",
+        emoji: "🚨",
+      };
+    case "reject":
+      return {
+        label: "Unable to detect",
+        bgClass: "bg-surface",
+        textClass: "text-muted",
+        borderClass: "border-line",
+        emoji: "❌",
+      };
   }
 }
 
 function phaseLabel(phase: FetPhase): string {
   switch (phase) {
-    case "idle":        return "Ready to start";
-    case "calibrating": return "Calibrating microphone…";
-    case "instruction": return "Take a deep breath, then blow all the air out!";
-    case "recording":   return "Recording — keep blowing!";
-    case "between":     return "Trial 1 done. Preparing trial 2…";
-    case "done":        return "Test complete";
+    case "idle":
+      return "Ready to start";
+    case "calibrating":
+      return "Calibrating microphone…";
+    case "instruction":
+      return "Take a deep breath, then blow all the air out!";
+    case "recording":
+      return "Recording — keep blowing!";
+    case "between":
+      return "Trial 1 done. Preparing trial 2…";
+    case "done":
+      return "Test complete";
   }
 }
-
-// ── Screen ────────────────────────────────────────────────────────────────────
 
 export function FetTestScreen() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -37,23 +77,23 @@ export function FetTestScreen() {
   const bestClass = result?.bestSec != null ? classifyFet(result.bestSec) : null;
 
   return (
-    <div style={screenStyle}>
-      <div style={wrapStyle}>
-        {/* Header */}
-        <div style={headerStyle}>
-          <h1 style={titleStyle}>🫁 Breathing Time Test</h1>
-          <Link to={("/fusion") as any} style={navLinkStyle}>Triage summary →</Link>
-        </div>
+    <AppFrame>
+      <AppHeader
+        back={{ to: "/fusion" }}
+        title="Breathing Test"
+        subtitle="Forced Expiratory Time (FET)"
+      />
 
-        <p style={subStyle}>
-          Forced Expiratory Time (FET) — a WHO-endorsed bedside airway obstruction screen.
+      <main className="flex flex-1 flex-col gap-4 px-4 pb-12 pt-4 text-ink">
+        <p className="text-xs text-muted leading-relaxed">
+          Forced Expiratory Time (FET) is a WHO-endorsed bedside screening tool for airway obstruction.
         </p>
 
         {/* Mic denied */}
         {denied && (
-          <div style={deniedCardStyle}>
-            <p style={deniedTitleStyle}>🎤 Microphone access blocked</p>
-            <p style={deniedBodyStyle}>
+          <div className="rounded-[16px] border border-red-500/30 bg-red-500/10 p-4">
+            <p className="text-sm font-bold text-red-600">🎤 Microphone access blocked</p>
+            <p className="text-xs text-red-700 mt-1">
               This test needs microphone access to measure your breathing time. Please enable the microphone in your browser settings and try again.
             </p>
           </div>
@@ -61,125 +101,135 @@ export function FetTestScreen() {
 
         {/* Instruction */}
         {(phase === "idle" || phase === "instruction" || phase === "calibrating") && (
-          <div style={instructionCardStyle}>
-            <p style={instructionStyle}>
-              Take the deepest breath you can, then blow ALL the air out through your open mouth until your lungs feel empty.
+          <div className="rounded-[20px] border border-line bg-paper p-4 flex flex-col gap-2">
+            <p className="text-sm font-medium text-ink leading-relaxed italic">
+              "Take the deepest breath you can, then blow ALL the air out through your open mouth until your lungs feel completely empty."
             </p>
-            <p style={phaseStatusStyle}>{phaseLabel(phase)}</p>
+            <p className="text-xs text-muted">{phaseLabel(phase)}</p>
           </div>
         )}
 
         {/* Status & live timer */}
-        <div style={statusRowStyle}>
-          <span style={phaseChipStyle(phase)}>{phaseLabel(phase)}</span>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <span className="rounded-full bg-pine/10 border border-pine/30 px-3 py-1 text-xs font-semibold text-pine">
+            {phaseLabel(phase)}
+          </span>
           {phase === "recording" && (
-            <span style={timerStyle}>{liveSec.toFixed(1)} s</span>
+            <span className="font-display text-2xl font-bold tabular-nums text-pine">
+              {liveSec.toFixed(1)} s
+            </span>
           )}
           {result != null && phase !== "done" && (
-            <span style={{ fontSize: 13, color: "#64748b" }}>Trial {trial + 1} / 2</span>
+            <span className="text-xs text-muted font-medium">Trial {trial + 1} / 2</span>
           )}
         </div>
 
         {/* Canvas envelope */}
-        <div style={canvasWrapStyle}>
-          <canvas ref={canvasRef} width={600} height={120} style={canvasStyle} />
+        <div className="relative rounded-[16px] border border-line bg-paper overflow-hidden shadow-inner">
+          <canvas ref={canvasRef} width={600} height={120} className="w-full h-auto block" />
           {phase === "idle" && (
-            <div style={canvasPlaceholderStyle}>Envelope will appear here during recording</div>
+            <div className="absolute inset-0 flex items-center justify-center text-xs text-muted pointer-events-none">
+              Breathing envelope waveform will appear here
+            </div>
           )}
         </div>
 
         {/* Controls */}
-        <div style={controlsRowStyle}>
-          {(phase === "idle") && (
-            <button id="btn-fet-start" style={primaryBtnStyle} onClick={() => actions.startTest()}>
-              🎤 Start Test
-            </button>
+        <div className="flex gap-2">
+          {phase === "idle" && (
+            <Button
+              id="btn-fet-start"
+              variant="default"
+              onClick={() => actions.startTest()}
+              className="w-full text-xs font-semibold"
+            >
+              🎤 Start Breathing Test
+            </Button>
           )}
           {phase === "instruction" && (
-            <button id="btn-fet-force" style={primaryBtnStyle} onClick={() => actions.forceStart()}>
+            <Button
+              id="btn-fet-force"
+              variant="default"
+              onClick={() => actions.forceStart()}
+              className="w-full text-xs font-semibold"
+            >
               ▶ Start Blowing Now
-            </button>
+            </Button>
           )}
           {(phase === "done" || denied) && (
-            <button id="btn-fet-retry" style={secondaryBtnStyle} onClick={() => actions.reset()}>
-              🔄 Retry
-            </button>
+            <Button
+              id="btn-fet-retry"
+              variant="secondary"
+              onClick={() => actions.reset()}
+              className="w-full text-xs font-semibold"
+            >
+              🔄 Retry Test
+            </Button>
           )}
         </div>
 
         {/* Result */}
         {result != null && (
-          <div style={resultCardStyle}>
-            <h2 style={resultTitleStyle}>Result</h2>
-            <div style={trialsRowStyle}>
+          <div className="rounded-[20px] border border-line bg-paper p-4 flex flex-col gap-3">
+            <h2 className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted">
+              Test Results
+            </h2>
+            <div className="flex gap-2">
               {result.trialSecs.map((s, i) => {
                 const c = classifyFet(s);
-                const cl = classLabel(c);
+                const cl = classConfig(c);
                 return (
-                  <div key={i} style={{ ...trialBadgeStyle, borderColor: cl.color + "55" }}>
-                    <span style={{ fontSize: 11, color: "#64748b" }}>Trial {i + 1}</span>
-                    <span style={{ fontSize: 20, fontWeight: 700, color: cl.color }}>{s.toFixed(1)} s</span>
-                    <span style={{ fontSize: 11, color: cl.color }}>{cl.emoji} {c}</span>
+                  <div
+                    key={i}
+                    className={`flex-1 rounded-[14px] border ${cl.borderClass} ${cl.bgClass} p-3 flex flex-col gap-0.5`}
+                  >
+                    <span className="text-[10px] font-bold text-muted uppercase">
+                      Trial {i + 1}
+                    </span>
+                    <span className={`text-base font-bold ${cl.textClass}`}>{s.toFixed(1)} s</span>
+                    <span className={`text-[10px] font-medium ${cl.textClass}`}>
+                      {cl.emoji} {c}
+                    </span>
                   </div>
                 );
               })}
             </div>
+
             {result.bestSec != null && bestClass != null ? (
               (() => {
-                const cl = classLabel(bestClass);
+                const cl = classConfig(bestClass);
                 return (
-                  <div style={{ ...bestResultStyle, background: cl.color + "18", border: `1px solid ${cl.color}44` }}>
-                    <span style={{ fontSize: 28 }}>{cl.emoji}</span>
+                  <div
+                    className={`flex items-center gap-3.5 rounded-[16px] p-3.5 border ${cl.bgClass} ${cl.borderClass} ${cl.textClass}`}
+                  >
+                    <span className="text-2xl">{cl.emoji}</span>
                     <div>
-                      <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: cl.color }}>{cl.label}</p>
-                      <p style={{ margin: "3px 0 0", fontSize: 13, color: "#94a3b8" }}>Best: {result.bestSec.toFixed(1)} s · Quality: {result.quality}</p>
+                      <p className="font-display text-sm font-bold">{cl.label}</p>
+                      <p className="text-xs opacity-80 mt-0.5">
+                        Best: {result.bestSec.toFixed(1)} s · Quality: {result.quality}
+                      </p>
                     </div>
                   </div>
                 );
               })()
             ) : (
-              <p style={{ color: "#64748b", fontSize: 13 }}>Unable to detect a valid exhalation. Please retry.</p>
+              <p className="text-xs text-muted">
+                Unable to detect a valid exhalation. Please retry.
+              </p>
             )}
-            <Link to={("/fusion") as any} style={ctaLinkStyle}>View triage summary →</Link>
+
+            <Link to="/fusion" className="w-full">
+              <Button variant="default" className="w-full text-xs font-semibold">
+                View Triage Summary →
+              </Button>
+            </Link>
           </div>
         )}
 
-        <p style={disclaimerStyle}>Not a medical device. For screening and education only.</p>
-      </div>
-    </div>
+        <p className="text-[11px] text-muted text-center leading-relaxed">
+          Not a medical device. For screening and education only.
+        </p>
+      </main>
+    </AppFrame>
   );
 }
-
-// ── Styles ────────────────────────────────────────────────────────────────────
-
-const screenStyle: CSSProperties = { minHeight: "100vh", background: "#0b1120", color: "#e2e8f0", fontFamily: 'system-ui,"Segoe UI",sans-serif', padding: "20px 16px 48px", boxSizing: "border-box" };
-const wrapStyle: CSSProperties = { maxWidth: 640, margin: "0 auto", display: "flex", flexDirection: "column", gap: 16 };
-const headerStyle: CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 };
-const titleStyle: CSSProperties = { margin: 0, fontSize: 20, fontWeight: 700 };
-const navLinkStyle: CSSProperties = { color: "#34d399", fontSize: 13, textDecoration: "none" };
-const subStyle: CSSProperties = { margin: 0, fontSize: 13, color: "#64748b" };
-const deniedCardStyle: CSSProperties = { background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.35)", borderRadius: 12, padding: "14px 16px" };
-const deniedTitleStyle: CSSProperties = { margin: 0, fontSize: 15, fontWeight: 700, color: "#f87171" };
-const deniedBodyStyle: CSSProperties = { margin: "6px 0 0", fontSize: 13, color: "#fca5a5" };
-const instructionCardStyle: CSSProperties = { background: "#0f172a", border: "1px solid #1e293b", borderRadius: 12, padding: "14px 16px" };
-const instructionStyle: CSSProperties = { margin: 0, fontSize: 15, color: "#e2e8f0", lineHeight: 1.55, fontStyle: "italic" };
-const phaseStatusStyle: CSSProperties = { margin: "10px 0 0", fontSize: 12, color: "#64748b" };
-const statusRowStyle: CSSProperties = { display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" };
-const timerStyle: CSSProperties = { fontSize: 28, fontWeight: 700, fontVariantNumeric: "tabular-nums", color: "#34d399" };
-function phaseChipStyle(phase: FetPhase): CSSProperties {
-  const color = phase === "recording" ? "#34d399" : phase === "done" ? "#4ade80" : "#64748b";
-  return { fontSize: 12, fontWeight: 600, color, background: color + "18", border: `1px solid ${color}44`, borderRadius: 20, padding: "4px 10px" };
-}
-const canvasWrapStyle: CSSProperties = { position: "relative", background: "#0f172a", border: "1px solid #1e293b", borderRadius: 12, overflow: "hidden" };
-const canvasStyle: CSSProperties = { display: "block", width: "100%", height: "auto" };
-const canvasPlaceholderStyle: CSSProperties = { position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", fontSize: 12, color: "#334155", pointerEvents: "none" };
-const controlsRowStyle: CSSProperties = { display: "flex", gap: 10 };
-const primaryBtnStyle: CSSProperties = { flex: 1, background: "rgba(52,211,153,0.15)", border: "1px solid rgba(52,211,153,0.4)", color: "#34d399", borderRadius: 12, padding: "14px 20px", fontSize: 15, fontWeight: 700, cursor: "pointer" };
-const secondaryBtnStyle: CSSProperties = { flex: 1, background: "transparent", border: "1px solid #334155", color: "#94a3b8", borderRadius: 12, padding: "14px 20px", fontSize: 15, fontWeight: 600, cursor: "pointer" };
-const resultCardStyle: CSSProperties = { background: "#0f172a", border: "1px solid #1e293b", borderRadius: 12, padding: "16px 18px", display: "flex", flexDirection: "column", gap: 12 };
-const resultTitleStyle: CSSProperties = { margin: 0, fontSize: 14, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em" };
-const trialsRowStyle: CSSProperties = { display: "flex", gap: 10 };
-const trialBadgeStyle: CSSProperties = { flex: 1, background: "#020617", border: "1px solid", borderRadius: 10, padding: "10px 14px", display: "flex", flexDirection: "column", gap: 3 };
-const bestResultStyle: CSSProperties = { borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 };
-const ctaLinkStyle: CSSProperties = { background: "rgba(52,211,153,0.10)", border: "1px solid rgba(52,211,153,0.3)", color: "#34d399", borderRadius: 10, padding: "11px 16px", fontSize: 13, fontWeight: 600, textDecoration: "none", textAlign: "center" };
-const disclaimerStyle: CSSProperties = { margin: 0, fontSize: 11, color: "#475569", textAlign: "center" };

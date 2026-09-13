@@ -1,12 +1,14 @@
-import { useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { AppFrame, AppHeader } from "@/components/app-shell";
+import { Button } from "@/components/ui/button";
 import { evaluateFusion, type FusionLevel, type FusionReason } from "../lib/fusionEngine";
 import { useFusionSession } from "../lib/fusionStore";
 import { classifyFet } from "../lib/breathAudioEngine";
 import { getStrings } from "../lib/translations";
 import { loadLocale } from "../lib/vitalsDatabase";
 
-// ── Reason code → human-readable label (en only for now) ────────────────────
+// ── Reason code → human-readable label ────────────────────────────────────────
 
 const REASON_LABELS: Record<string, string> = {
   bpm_extreme: "Heart rate > 150 bpm",
@@ -33,20 +35,50 @@ function labelFor(reason: FusionReason, spo2UrgentReason: string, spo2LowReason:
 
 // ── Level styling ─────────────────────────────────────────────────────────────
 
-function levelStyle(level: FusionLevel): { bg: string; border: string; color: string; emoji: string; label: string } {
+function levelConfig(level: FusionLevel): {
+  bgClass: string;
+  borderClass: string;
+  textClass: string;
+  emoji: string;
+  label: string;
+} {
   switch (level) {
     case "urgent":
-      return { bg: "rgba(248,113,113,0.10)", border: "rgba(248,113,113,0.4)", color: "#f87171", emoji: "🚨", label: "URGENT — Go now" };
+      return {
+        bgClass: "bg-red-500/10",
+        borderClass: "border-red-500/30",
+        textClass: "text-red-700 dark:text-red-400",
+        emoji: "🚨",
+        label: "URGENT — Go to Hospital Now",
+      };
     case "phc_today":
-      return { bg: "rgba(251,191,36,0.10)", border: "rgba(251,191,36,0.4)", color: "#fbbf24", emoji: "⚠️", label: "Visit PHC today" };
+      return {
+        bgClass: "bg-amber-500/10",
+        borderClass: "border-amber-500/30",
+        textClass: "text-amber-800 dark:text-amber-400",
+        emoji: "⚠️",
+        label: "Visit PHC Today",
+      };
     case "self_care":
-      return { bg: "rgba(74,222,128,0.10)", border: "rgba(74,222,128,0.4)", color: "#4ade80", emoji: "✅", label: "Self-care at home" };
+      return {
+        bgClass: "bg-emerald-500/10",
+        borderClass: "border-emerald-500/30",
+        textClass: "text-emerald-800 dark:text-emerald-400",
+        emoji: "✅",
+        label: "Self-Care & Routine Monitoring",
+      };
     case "insufficient_data":
-      return { bg: "rgba(148,163,184,0.10)", border: "rgba(148,163,184,0.35)", color: "#94a3b8", emoji: "ℹ️", label: "Insufficient data" };
+      return {
+        bgClass: "bg-surface",
+        borderClass: "border-line",
+        textClass: "text-muted",
+        emoji: "ℹ️",
+        label: "Insufficient Data",
+      };
   }
 }
 
-// ── Questionnaire form ────────────────────────────────────────────────────────
+// ── Fusion Screen ─────────────────────────────────────────────────────────────
 
 export function FusionScreen() {
   const session = useFusionSession();
@@ -61,114 +93,203 @@ export function FusionScreen() {
   const [bleeding, setBleeding] = useState(session.symptoms?.bleeding ?? false);
   const [feverDays, setFeverDays] = useState(session.symptoms?.feverDays?.toString() ?? "");
 
-  // Build inputs live (no Submit button — reactive)
-  const inputs = useMemo(() => ({
-    ageYears: age ? parseInt(age, 10) : undefined,
-    pregnant,
-    symptoms: {
+  // Build inputs live
+  const inputs = useMemo(
+    () => ({
+      ageYears: age ? parseInt(age, 10) : undefined,
+      pregnant,
+      symptoms: {
+        breathless,
+        chestPain,
+        fainting,
+        bleeding,
+        feverDays: feverDays ? parseInt(feverDays, 10) : undefined,
+      },
+      rppg: session.rppg,
+      spo2: session.spo2,
+      crtSec: session.crtSec,
+      fetSec: session.fetSec,
+    }),
+    [
+      age,
+      pregnant,
       breathless,
       chestPain,
       fainting,
       bleeding,
-      feverDays: feverDays ? parseInt(feverDays, 10) : undefined,
-    },
-    rppg: session.rppg,
-    spo2: session.spo2,
-    crtSec: session.crtSec,
-    fetSec: session.fetSec,
-  }), [age, pregnant, breathless, chestPain, fainting, bleeding, feverDays, session.rppg, session.spo2, session.crtSec, session.fetSec]);
+      feverDays,
+      session.rppg,
+      session.spo2,
+      session.crtSec,
+      session.fetSec,
+    ],
+  );
 
   const result = useMemo(() => evaluateFusion(inputs), [inputs]);
-  const ls = levelStyle(result.level);
-
+  const lc = levelConfig(result.level);
   const fetClass = session.fetSec != null ? classifyFet(session.fetSec) : null;
 
   return (
-    <div style={screenStyle}>
-      <div style={wrapStyle}>
-        {/* Header */}
-        <div style={headerStyle}>
-          <h1 style={titleStyle}>🩺 Triage Summary</h1>
-          <Link to="/scan" style={navLinkStyle}>← Back to scan</Link>
-        </div>
+    <AppFrame>
+      <AppHeader
+        back={{ to: "/" }}
+        title="Triage Summary"
+        subtitle="Multimodal Signal Assessment"
+      />
 
-        {/* Level card */}
-        <div style={{ ...levelCardStyle, background: ls.bg, border: `1px solid ${ls.border}` }}>
-          <span style={levelEmojiStyle}>{ls.emoji}</span>
-          <div>
-            <p style={{ ...levelLabelStyle, color: ls.color }}>{ls.label}</p>
-            <p style={signalsUsedStyle}>{result.signalsUsed} signal{result.signalsUsed !== 1 ? "s" : ""} used</p>
+      <main className="flex flex-1 flex-col gap-4 px-4 pb-12 pt-4">
+        {/* Triage Level Card */}
+        <div
+          className={`flex items-center gap-3.5 rounded-[20px] p-4 border ${lc.bgClass} ${lc.borderClass} ${lc.textClass}`}
+        >
+          <span className="text-3xl leading-none">{lc.emoji}</span>
+          <div className="flex-1 min-w-0">
+            <p className="font-display text-base font-bold leading-tight">{lc.label}</p>
+            <p className="text-xs opacity-80 mt-0.5">
+              {result.signalsUsed} signal{result.signalsUsed !== 1 ? "s" : ""} collected
+            </p>
           </div>
         </div>
 
-        {/* Signals collected */}
-        <div style={sectionStyle}>
-          <h2 style={sectionTitleStyle}>Collected signals</h2>
-          <div style={signalsGridStyle}>
-            {session.rppg ? (
-              <SignalBadge
-                label="rPPG"
-                value={session.rppg.bpm != null ? `${session.rppg.bpm} bpm` : "No HR"}
-                quality={session.rppg.quality}
-              />
-            ) : <SignalBadge label="rPPG" value="Not measured" quality="reject" />}
-            {session.spo2 ? (
-              <SignalBadge
-                label="SpO₂"
-                value={session.spo2.value != null ? `${session.spo2.value}%` : t.unableToDetect}
-                quality={session.spo2.quality}
-              />
-            ) : <SignalBadge label="SpO₂" value="Not measured" quality="reject" />}
-            {session.fetSec != null ? (
-              <SignalBadge
-                label="FET"
-                value={`${session.fetSec.toFixed(1)} s`}
-                quality={fetClass === "reject" ? "reject" : fetClass === "obstruction" ? "weak" : "good"}
-              />
-            ) : <SignalBadge label="FET" value="Not measured" quality="reject" />}
-            {session.crtSec != null ? (
-              <SignalBadge label="CRT" value={`${session.crtSec.toFixed(1)} s`} quality="good" />
-            ) : <SignalBadge label="CRT" value="Not measured" quality="reject" />}
+        {/* Collected signals */}
+        <div className="rounded-[20px] border border-line bg-paper p-4 flex flex-col gap-3">
+          <h2 className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted">
+            Collected Signals
+          </h2>
+          <div className="grid grid-cols-2 gap-2">
+            <SignalBadge
+              label="rPPG Heart Rate"
+              value={
+                session.rppg?.bpm != null
+                  ? `${session.rppg.bpm} bpm`
+                  : session.rppg
+                  ? "No HR"
+                  : "Not measured"
+              }
+              quality={session.rppg ? session.rppg.quality : "reject"}
+            />
+            <SignalBadge
+              label="Blood Oxygen (SpO₂)"
+              value={
+                session.spo2?.value != null
+                  ? `${session.spo2.value}%`
+                  : session.spo2
+                  ? t.unableToDetect
+                  : "Not measured"
+              }
+              quality={session.spo2 ? session.spo2.quality : "reject"}
+            />
+            <SignalBadge
+              label="Breathing (FET)"
+              value={session.fetSec != null ? `${session.fetSec.toFixed(1)} s` : "Not measured"}
+              quality={
+                session.fetSec != null
+                  ? fetClass === "reject"
+                    ? "reject"
+                    : fetClass === "obstruction"
+                    ? "weak"
+                    : "good"
+                  : "reject"
+              }
+            />
+            <SignalBadge
+              label="Capillary Refill (CRT)"
+              value={session.crtSec != null ? `${session.crtSec.toFixed(1)} s` : "Not measured"}
+              quality={session.crtSec != null ? "good" : "reject"}
+            />
           </div>
         </div>
 
         {/* Questionnaire */}
-        <div style={sectionStyle}>
-          <h2 style={sectionTitleStyle}>Questionnaire</h2>
-          <label style={labelStyle}>
-            Age (years)
-            <input type="number" min={0} max={120} value={age} onChange={e => setAge(e.target.value)} style={inputStyle} inputMode="numeric" placeholder="--" />
-          </label>
-          <label style={checkboxLabelStyle}>
-            <input type="checkbox" checked={pregnant} onChange={e => setPregnant(e.target.checked)} style={{ marginRight: 8 }} />
+        <div className="rounded-[20px] border border-line bg-paper p-4 flex flex-col gap-3 text-ink">
+          <h2 className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted">
+            Intake Questionnaire
+          </h2>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-muted">Age (years)</label>
+            <input
+              type="number"
+              min={0}
+              max={120}
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              placeholder="--"
+              inputMode="numeric"
+              className="rounded-[12px] border border-line bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-pine"
+            />
+          </div>
+
+          <label className="flex items-center gap-2.5 text-xs font-medium text-ink cursor-pointer pt-1">
+            <input
+              type="checkbox"
+              checked={pregnant}
+              onChange={(e) => setPregnant(e.target.checked)}
+              className="size-4 accent-pine rounded"
+            />
             Currently pregnant
           </label>
-          <p style={symHeadStyle}>Symptoms</p>
-          {([
-            ["breathless", "Breathlessness", breathless, setBreathless],
-            ["chestPain", "Chest pain", chestPain, setChestPain],
-            ["fainting", "Fainting / loss of consciousness", fainting, setFainting],
-            ["bleeding", "Bleeding (external)", bleeding, setBleeding],
-          ] as const).map(([, sym, val, set]) => (
-            <label key={sym} style={checkboxLabelStyle}>
-              <input type="checkbox" checked={val as boolean} onChange={e => (set as (v: boolean) => void)(e.target.checked)} style={{ marginRight: 8 }} />
-              {sym}
-            </label>
-          ))}
-          <label style={labelStyle}>
-            Days of fever
-            <input type="number" min={0} max={30} value={feverDays} onChange={e => setFeverDays(e.target.value)} style={inputStyle} inputMode="numeric" placeholder="0" />
-          </label>
+
+          <div className="pt-2 border-t border-line/60 flex flex-col gap-2">
+            <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted">
+              Reported Symptoms
+            </p>
+            {(
+              [
+                ["breathless", "Breathlessness / Shortness of breath", breathless, setBreathless],
+                ["chestPain", "Chest pain or tightness", chestPain, setChestPain],
+                ["fainting", "Fainting / loss of consciousness", fainting, setFainting],
+                ["bleeding", "Active bleeding (external)", bleeding, setBleeding],
+              ] as const
+            ).map(([, sym, val, set]) => (
+              <label
+                key={sym}
+                className="flex items-center gap-2.5 text-xs font-medium text-ink cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={val as boolean}
+                  onChange={(e) => (set as (v: boolean) => void)(e.target.checked)}
+                  className="size-4 accent-pine rounded"
+                />
+                {sym}
+              </label>
+            ))}
+          </div>
+
+          <div className="flex flex-col gap-1.5 pt-1">
+            <label className="text-xs font-semibold text-muted">Days of fever</label>
+            <input
+              type="number"
+              min={0}
+              max={30}
+              value={feverDays}
+              onChange={(e) => setFeverDays(e.target.value)}
+              placeholder="0"
+              inputMode="numeric"
+              className="rounded-[12px] border border-line bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-pine"
+            />
+          </div>
         </div>
 
         {/* Reasons */}
         {result.reasons.length > 0 && (
-          <div style={sectionStyle}>
-            <h2 style={sectionTitleStyle}>Reasons</h2>
-            <ul style={reasonsListStyle}>
-              {result.reasons.map(r => (
-                <li key={r.code} style={reasonItemStyle}>
-                  <span style={reasonDotStyle(r.weight)} />
+          <div className="rounded-[20px] border border-line bg-paper p-4 flex flex-col gap-2">
+            <h2 className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted">
+              Assessment Findings
+            </h2>
+            <ul className="flex flex-col gap-1.5">
+              {result.reasons.map((r) => (
+                <li key={r.code} className="flex items-center gap-2 text-xs font-medium text-ink">
+                  <span
+                    className={`size-2 rounded-full shrink-0 ${
+                      r.weight >= 10
+                        ? "bg-red-500"
+                        : r.weight >= 5
+                        ? "bg-amber-500"
+                        : "bg-pine"
+                    }`}
+                  />
                   {labelFor(r, t.spo2UrgentReason, t.spo2LowReason)}
                 </li>
               ))}
@@ -178,71 +299,76 @@ export function FusionScreen() {
 
         {/* Applicable health schemes link */}
         {(result.level === "urgent" || result.level === "phc_today") && (
-          <div style={{ textAlign: "center", margin: "4px 0" }}>
+          <div className="text-center py-1">
             <Link
               to="/schemes"
-              style={{
-                color: "#34d399",
-                fontSize: 14,
-                fontWeight: 600,
-                textDecoration: "underline",
-              }}
+              className="text-xs font-semibold text-pine hover:underline inline-flex items-center gap-1"
             >
-              {t.schemesLinkFromFusion ?? "See applicable health schemes →"}
+              {t.schemesLinkFromFusion ?? "See applicable government health schemes →"}
             </Link>
           </div>
         )}
 
-        {/* Nav links to all tests + referral */}
-        <div style={navRowStyle}>
-          <Link to={("/fet") as any} style={ctaLinkStyle}>🫁 Breathing Test</Link>
-          <Link to={("/crt") as any} style={ctaLinkStyle}>💅 CRT Test</Link>
-          <Link to={("/referral") as any} style={{ ...ctaLinkStyle, color: "#fbbf24", background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.3)" }}>📋 Referral Slip</Link>
+        {/* Test Navigation Row */}
+        <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-2 gap-2">
+            <Link to="/fet" className="w-full">
+              <Button variant="secondary" className="w-full text-xs font-semibold">
+                🫁 Breathing Test
+              </Button>
+            </Link>
+            <Link to="/crt" className="w-full">
+              <Button variant="secondary" className="w-full text-xs font-semibold">
+                💅 CRT Test
+              </Button>
+            </Link>
+          </div>
+          <Link to="/referral" className="w-full">
+            <Button
+              id="btn-goto-referral-slip"
+              variant="default"
+              className="w-full text-xs font-semibold gap-1.5"
+            >
+              📋 Generate Referral Slip →
+            </Button>
+          </Link>
         </div>
 
-        <p style={disclaimerStyle}>Not a medical device. For screening and education only.</p>
-      </div>
-    </div>
+        <p className="text-[11px] text-muted text-center leading-relaxed">
+          Not a medical device. For screening and clinical decision support only.
+        </p>
+      </main>
+    </AppFrame>
   );
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function SignalBadge({ label, value, quality }: { label: string; value: string; quality: "good" | "weak" | "reject" | "manual" }) {
-  const color = quality === "good" || quality === "manual" ? "#4ade80" : quality === "weak" ? "#fbbf24" : "#64748b";
+function SignalBadge({
+  label,
+  value,
+  quality,
+}: {
+  label: string;
+  value: string;
+  quality: "good" | "weak" | "reject" | "manual";
+}) {
+  const badgeColor =
+    quality === "good" || quality === "manual"
+      ? "text-pine bg-pine/10 border-pine/30"
+      : quality === "weak"
+      ? "text-amber-600 bg-amber-500/10 border-amber-500/30"
+      : "text-muted bg-surface border-line";
+
   return (
-    <div style={{ background: "#0f172a", border: `1px solid ${color}44`, borderRadius: 10, padding: "10px 14px" }}>
-      <p style={{ margin: 0, fontSize: 11, color: "#64748b", fontWeight: 600 }}>{label}</p>
-      <p style={{ margin: "3px 0 0", fontSize: 16, fontWeight: 700, color: "#e2e8f0" }}>{value}</p>
-      <span style={{ fontSize: 11, color, fontWeight: 600 }}>{quality.toUpperCase()}</span>
+    <div className="rounded-[14px] border border-line bg-surface p-3 flex flex-col gap-1">
+      <p className="text-[10px] font-bold text-muted uppercase tracking-wider">{label}</p>
+      <p className="text-sm font-bold text-ink truncate">{value}</p>
+      <span
+        className={`inline-block w-fit text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-[6px] border ${badgeColor}`}
+      >
+        {quality}
+      </span>
     </div>
   );
 }
-
-// ── Styles ────────────────────────────────────────────────────────────────────
-
-const screenStyle: CSSProperties = { minHeight: "100vh", background: "#0b1120", color: "#e2e8f0", fontFamily: 'system-ui,"Segoe UI",sans-serif', padding: "20px 16px 48px", boxSizing: "border-box" };
-const wrapStyle: CSSProperties = { maxWidth: 640, margin: "0 auto", display: "flex", flexDirection: "column", gap: 16 };
-const headerStyle: CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 };
-const titleStyle: CSSProperties = { margin: 0, fontSize: 20, fontWeight: 700 };
-const navLinkStyle: CSSProperties = { color: "#34d399", fontSize: 13, textDecoration: "none" };
-const levelCardStyle: CSSProperties = { borderRadius: 14, padding: "18px 20px", display: "flex", alignItems: "center", gap: 14 };
-const levelEmojiStyle: CSSProperties = { fontSize: 36 };
-const levelLabelStyle: CSSProperties = { margin: 0, fontSize: 20, fontWeight: 700 };
-const signalsUsedStyle: CSSProperties = { margin: "3px 0 0", fontSize: 12, color: "#64748b" };
-const sectionStyle: CSSProperties = { background: "#0f172a", border: "1px solid #1e293b", borderRadius: 12, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 };
-const sectionTitleStyle: CSSProperties = { margin: 0, fontSize: 14, fontWeight: 700, color: "#94a3b8", letterSpacing: "0.05em", textTransform: "uppercase" };
-const signalsGridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: 10 };
-const labelStyle: CSSProperties = { fontSize: 13, color: "#94a3b8", fontWeight: 600, display: "flex", flexDirection: "column", gap: 4 };
-const inputStyle: CSSProperties = { background: "#020617", border: "1px solid #334155", borderRadius: 8, padding: "8px 10px", fontSize: 15, color: "#e2e8f0", boxSizing: "border-box" };
-const checkboxLabelStyle: CSSProperties = { fontSize: 13, color: "#cbd5e1", display: "flex", alignItems: "center", cursor: "pointer" };
-const symHeadStyle: CSSProperties = { margin: 0, fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em" };
-const reasonsListStyle: CSSProperties = { listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 6 };
-const reasonItemStyle: CSSProperties = { display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#cbd5e1" };
-function reasonDotStyle(weight: number): CSSProperties {
-  const color = weight >= 10 ? "#f87171" : weight >= 5 ? "#fbbf24" : "#4ade80";
-  return { width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 };
-}
-const navRowStyle: CSSProperties = { display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center" };
-const ctaLinkStyle: CSSProperties = { background: "#0f172a", border: "1px solid #1e293b", borderRadius: 10, padding: "12px 20px", color: "#34d399", fontSize: 14, fontWeight: 600, textDecoration: "none" };
-const disclaimerStyle: CSSProperties = { margin: 0, fontSize: 11, color: "#475569", textAlign: "center" };

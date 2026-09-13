@@ -15,7 +15,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
   );
 }
 
-type BackLink = { to: "/"; params?: never } | { to: "/patient/$id"; params: { id: string } };
+export type BackLink =
+  | { to: string; params?: Record<string, string>; search?: Record<string, unknown>; onClick?: never }
+  | { onClick: () => void; to?: never; params?: never; search?: never };
 
 export function AppHeader({
   back,
@@ -32,14 +34,26 @@ export function AppHeader({
     <header className="sticky top-0 z-20 border-b border-line/80 bg-surface/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-sm">
       <div className="flex items-center justify-between gap-3">
         {back ? (
-          <Link
-            to={back.to}
-            params={back.params}
-            className="inline-flex size-11 items-center justify-center rounded-[12px] text-ink hover:bg-paper"
-            aria-label={backLabel}
-          >
-            <ChevronLeft className="size-5" />
-          </Link>
+          back.onClick ? (
+            <button
+              type="button"
+              onClick={back.onClick}
+              className="inline-flex size-11 items-center justify-center rounded-[12px] text-ink hover:bg-paper"
+              aria-label={backLabel}
+            >
+              <ChevronLeft className="size-5" />
+            </button>
+          ) : (
+            <Link
+              to={back.to as any}
+              params={back.params as any}
+              search={back.search as any}
+              className="inline-flex size-11 items-center justify-center rounded-[12px] text-ink hover:bg-paper"
+              aria-label={backLabel}
+            >
+              <ChevronLeft className="size-5" />
+            </Link>
+          )
         ) : (
           <Link to="/" className="flex items-center gap-2.5 no-underline">
             <UnivoltMark />

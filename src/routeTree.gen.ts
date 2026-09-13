@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AwarenessRouteImport } from './routes/awareness'
 import { Route as CrtRouteImport } from './routes/crt'
+import { Route as DebugRouteImport } from './routes/debug'
 import { Route as FetRouteImport } from './routes/fet'
 import { Route as FusionRouteImport } from './routes/fusion'
 import { Route as ReferralRouteImport } from './routes/referral'
@@ -42,6 +43,11 @@ const AwarenessRoute = AwarenessRouteImport.update({
 const CrtRoute = CrtRouteImport.update({
   id: '/crt',
   path: '/crt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DebugRoute = DebugRouteImport.update({
+  id: '/debug',
+  path: '/debug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FetRoute = FetRouteImport.update({
@@ -129,6 +135,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/awareness': typeof AwarenessRoute
   '/crt': typeof CrtRoute
+  '/debug': typeof DebugRoute
   '/fet': typeof FetRoute
   '/fusion': typeof FusionRoute
   '/referral': typeof ReferralRoute
@@ -150,6 +157,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/awareness': typeof AwarenessRoute
   '/crt': typeof CrtRoute
+  '/debug': typeof DebugRoute
   '/fet': typeof FetRoute
   '/fusion': typeof FusionRoute
   '/referral': typeof ReferralRoute
@@ -171,6 +179,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/awareness': typeof AwarenessRoute
   '/crt': typeof CrtRoute
+  '/debug': typeof DebugRoute
   '/fet': typeof FetRoute
   '/fusion': typeof FusionRoute
   '/referral': typeof ReferralRoute
@@ -194,6 +203,7 @@ export interface FileRouteTypes {
     | '/'
     | '/awareness'
     | '/crt'
+    | '/debug'
     | '/fet'
     | '/fusion'
     | '/referral'
@@ -215,6 +225,7 @@ export interface FileRouteTypes {
     | '/'
     | '/awareness'
     | '/crt'
+    | '/debug'
     | '/fet'
     | '/fusion'
     | '/referral'
@@ -235,6 +246,7 @@ export interface FileRouteTypes {
     | '/'
     | '/awareness'
     | '/crt'
+    | '/debug'
     | '/fet'
     | '/fusion'
     | '/referral'
@@ -257,6 +269,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AwarenessRoute: typeof AwarenessRoute
   CrtRoute: typeof CrtRoute
+  DebugRoute: typeof DebugRoute
   FetRoute: typeof FetRoute
   FusionRoute: typeof FusionRoute
   ReferralRoute: typeof ReferralRoute
@@ -290,6 +303,13 @@ declare module '@tanstack/react-router' {
       path: '/crt'
       fullPath: '/crt'
       preLoaderRoute: typeof CrtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/debug': {
+      id: '/debug'
+      path: '/debug'
+      fullPath: '/debug'
+      preLoaderRoute: typeof DebugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/fet': {
@@ -433,6 +453,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AwarenessRoute: AwarenessRoute,
   CrtRoute: CrtRoute,
+  DebugRoute: DebugRoute,
   FetRoute: FetRoute,
   FusionRoute: FusionRoute,
   ReferralRoute: ReferralRoute,

@@ -555,11 +555,11 @@ function PatientProfileScreen() {
           id="btn-patient-add-spo2"
           variant="secondary"
           size="lg"
-          className="h-auto flex-col items-start gap-1 px-4 py-3.5 w-full border-pine/30 bg-pine/5 hover:bg-pine/10"
+          className="h-auto flex-col items-start gap-1 px-4 py-3.5 w-full border-line bg-paper text-ink hover:bg-surface shadow-xs"
         >
           <Link to="/patient/$id/spo2" params={{ id: patient.id }}>
             <span className="text-base leading-none">🩸</span>
-            <span className="text-left text-sm font-semibold text-pine dark:text-pine-fg">
+            <span className="text-left text-sm font-semibold text-ink">
               {t.spo2AddButton}
             </span>
           </Link>

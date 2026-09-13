@@ -203,7 +203,7 @@ export function Spo2FingerScanScreen({ patientId }: Spo2FingerScanScreenProps) {
               </div>
             )}
 
-            <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 p-2.5 rounded-[12px]">
+            <p className="text-[11px] font-semibold text-amber-800 bg-amber-500/10 border border-amber-500/20 p-2.5 rounded-[12px]">
               🧼 {t.spo2Hygiene}
             </p>
 

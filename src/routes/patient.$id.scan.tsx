@@ -328,7 +328,7 @@ export function VitalsScanScreen() {
             <div className="mt-4 flex flex-col gap-2">
               <Button asChild variant="secondary" size="lg" className="w-full" id="btn-patient-add-spo2">
                 <Link to="/patient/$id/spo2" params={{ id: patient.id }}>
-                  {t.spo2AddButton}
+                  <span className="mr-1.5">🩸</span> {t.spo2AddButton}
                 </Link>
               </Button>
               {detected ? (

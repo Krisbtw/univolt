@@ -13,12 +13,19 @@ export type ModelSource = "self" | "cdn" | "none";
 export let lastModelSource: ModelSource = "none";
 export let lastModelError: string = "none";
 
-let detectorPromise: Promise<FaceDetector | null> | null = null;
+export let lastDetectError: string | null = null;
 
 async function tryCreate(wasm: string, model: string): Promise<FaceDetector> {
   const fileset = await FilesetResolver.forVisionTasks(wasm);
-  return FaceDetector.createFromModelPath(fileset, model);
+  return FaceDetector.createFromOptions(fileset, {
+    baseOptions: {
+      modelAssetPath: model,
+    },
+    runningMode: "VIDEO",
+  });
 }
+
+let detectorPromise: Promise<FaceDetector | null> | null = null;
 
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
@@ -36,6 +43,7 @@ export function loadFaceDetector(): Promise<FaceDetector | null> {
       try {
         const d = await withTimeout(tryCreate(SELF_WASM, SELF_MODEL), LOAD_TIMEOUT_MS);
         lastModelSource = "self";
+        lastModelError = "none";
         return d;
       } catch (err) {
         lastModelError = String(err);
@@ -44,10 +52,12 @@ export function loadFaceDetector(): Promise<FaceDetector | null> {
       try {
         const d = await withTimeout(tryCreate(CDN_WASM, CDN_MODEL), LOAD_TIMEOUT_MS);
         lastModelSource = "cdn";
+        lastModelError = "none";
         return d;
       } catch (err) {
         lastModelError = String(err);
         console.warn("[univolt] CDN face model failed, using skin fallback:", err);
+        detectorPromise = null;
         return null;
       }
     })();
@@ -67,6 +77,7 @@ export function detectFace(
 ): FaceBox | null {
   try {
     const res = detector.detectForVideo(video, tsMs);
+    lastDetectError = null;
     const detections = res.detections ?? [];
     let best: FaceBox | null = null;
     let bestArea = 0;
@@ -86,6 +97,7 @@ export function detectFace(
     }
     return best;
   } catch (err) {
+    lastDetectError = err instanceof Error ? err.message : String(err);
     console.warn("[univolt] detectForVideo error:", err);
     return null;
   }

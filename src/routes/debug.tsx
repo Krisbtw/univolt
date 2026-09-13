@@ -8,6 +8,7 @@ import {
   skinRegionRoi,
   lastModelSource,
   lastModelError,
+  lastDetectError,
 } from "@/lib/faceDetector";
 import type { FaceDetector } from "@mediapipe/tasks-vision";
 import { Play, Copy, CheckCircle2, XCircle, Loader2, AlertCircle } from "lucide-react";
@@ -74,7 +75,7 @@ export function DebugScreen() {
     let videoEl = videoRef.current;
     let cameraSuccess = false;
 
-    // ─────────────────────────────────────────────────────────────
+    // ─────────────────────────────    // ─────────────────────────────────────────────────────────────
     // TEST 1 — Camera
     // ─────────────────────────────────────────────────────────────
     try {
@@ -84,51 +85,56 @@ export function DebugScreen() {
         window.location.hostname === "127.0.0.1";
       const hasMediaDevices = Boolean(navigator.mediaDevices?.getUserMedia);
 
-      let log = `Protocol: ${window.location.protocol} (${isHttps ? "OK" : "WARNING: Not HTTPS"})\n`;
-      log += `navigator.mediaDevices: ${hasMediaDevices ? "Present" : "Missing"}\n`;
+      let log = `location.protocol: ${window.location.protocol} (${isHttps ? "PASS" : "FAIL: must be https:"})\n`;
+      log += `navigator.mediaDevices: ${hasMediaDevices ? "PASS (exists)" : "FAIL (missing)"}\n`;
 
       if (!hasMediaDevices) {
         throw new Error("navigator.mediaDevices.getUserMedia is unsupported in this environment.");
       }
 
-      log += "Requesting front camera getUserMedia...\n";
+      log += "getUserMedia({ video: { facingMode: 'user' } })...\n";
       let stream: MediaStream;
       try {
         stream = await navigator.mediaDevices.getUserMedia({
-          audio: false,
-          video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+          video: { facingMode: "user" },
         });
+        log += "stream: obtained\n";
       } catch (err) {
-        log += `Ideal constraints failed (${err}), trying fallback { video: true }...\n`;
-        stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
+        log += `Direct user facingMode failed (${err}), trying fallback { video: true }...\n`;
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        log += "stream: obtained (fallback)\n";
       }
 
       streamRef.current = stream;
       if (!videoEl) {
-        videoEl = document.createElement("video");
+        videoEl = videoRef.current;
+        if (!videoEl) {
+          videoEl = document.createElement("video");
+        }
       }
       videoEl.srcObject = stream;
       videoEl.muted = true;
       videoEl.playsInline = true;
+      videoEl.autoplay = true;
       await videoEl.play();
-      log += "video.play() ok; waiting 2s to verify feed dimensions...\n";
+      log += "video.play(): ok\n";
 
       await new Promise((r) => setTimeout(r, 2000));
 
       const w = videoEl.videoWidth || 0;
       const h = videoEl.videoHeight || 0;
-      log += `Resolution after 2s: ${w}×${h}\n`;
+      log += `videoWidth×videoHeight (after 2s): ${w}×${h}\n`;
 
       if (w > 0 && h > 0) {
         cameraSuccess = true;
         setT1({
           status: "pass",
-          details: log + `Result: Stream active (${w}×${h} px).`,
+          details: log + `Result: PASS (stream active, non-zero dimensions)`,
         });
       } else {
         setT1({
           status: "fail",
-          details: log + "Error: Video dimensions remained 0×0 after 2s.",
+          details: log + `Result: FAIL (video dimensions remained 0×0 after 2s)`,
         });
       }
     } catch (err) {
@@ -166,24 +172,24 @@ export function DebugScreen() {
       }
 
       const log =
-        `/models/blaze_face_short_range.tflite: HTTP ${tfliteStatus} [${tfliteType}]\n` +
-        `/mediapipe/wasm/vision_wasm_internal.js: HTTP ${wasmStatus} [${wasmType}]\n`;
+        `/models/blaze_face_short_range.tflite: status=${tfliteStatus}, content-type=${tfliteType}\n` +
+        `/mediapipe/wasm/vision_wasm_internal.js: status=${wasmStatus}, content-type=${wasmType}\n`;
 
       const tfliteOk = tfliteStatus === 200 && !tfliteType.includes("text/html");
-      const wasmOk = wasmStatus === 200 && !tfliteType.includes("text/html");
+      const wasmOk = wasmStatus === 200 && !wasmType.includes("text/html");
 
       if (tfliteOk && wasmOk) {
         staticSuccess = true;
         setT2({
           status: "pass",
-          details: log + "Result: Both static files served with HTTP 200 and binary/script content types.",
+          details: log + "Result: PASS (200 OK, non-html)",
         });
       } else {
         setT2({
           status: "fail",
           details:
             log +
-            "Result: Static asset verification failed. Files must be served as static 200s (not 404 or text/html SPA index).",
+            "Result: FAIL (expected 200 OK with static assets, got 404 or text/html fallback)",
         });
       }
     } catch (err) {
@@ -211,16 +217,15 @@ export function DebugScreen() {
         setT3({
           status: "pass",
           details:
-            `Model load succeeded.\n` +
-            `Tier source: ${lastModelSource}\n` +
-            `Last model error: ${lastModelError}`,
+            `Tier succeeded: ${lastModelSource} (PASS)\n` +
+            (lastModelError !== "none" ? `Previous tier error: ${lastModelError.slice(0, 200)}\n` : "") +
+            `Model load: Success (ready for detection)`,
         });
       } else {
         setT3({
           status: "fail",
           details:
-            `Model returned null (fell back to skin).\n` +
-            `Tier source: ${lastModelSource}\n` +
+            `Tier: ${lastModelSource} (FAIL - returned null)\n` +
             `Error: ${lastModelError.slice(0, 200)}`,
         });
       }
@@ -249,7 +254,7 @@ export function DebugScreen() {
     } else {
       let framesProcessed = 0;
       let totalFacesDetected = 0;
-      let lastDetectError: string | null = null;
+      let detectErrText: string | null = null;
       const startTime = performance.now();
       const runDurationMs = 10_000;
 
@@ -270,8 +275,11 @@ export function DebugScreen() {
               if (box !== null) {
                 totalFacesDetected++;
               }
+              if (lastDetectError) {
+                detectErrText = lastDetectError;
+              }
             } catch (dErr) {
-              lastDetectError = String(dErr);
+              detectErrText = String(dErr);
             }
           }
 
@@ -284,8 +292,8 @@ export function DebugScreen() {
                 `Running live detection... (${remSec}s remaining)\n` +
                 `Frames processed: ${framesProcessed}\n` +
                 `Faces detected: ${totalFacesDetected}\n` +
-                `Current rate: ${(totalFacesDetected / (Math.max(1, elapsed) / 1000)).toFixed(1)} faces/s` +
-                (lastDetectError ? `\nLast error: ${lastDetectError}` : ""),
+                `Faces/second: ${(totalFacesDetected / (Math.max(1, elapsed) / 1000)).toFixed(1)}` +
+                (detectErrText ? `\ndetectForVideo error: ${detectErrText}` : ""),
             });
           }
 
@@ -296,25 +304,16 @@ export function DebugScreen() {
       });
 
       const facesPerSec = (totalFacesDetected / 10).toFixed(1);
-      if (totalFacesDetected > 0) {
-        setT4({
-          status: "pass",
-          details:
-            `Total frames processed: ${framesProcessed}\n` +
-            `Total faces detected: ${totalFacesDetected}\n` +
-            `Detection rate: ${facesPerSec} faces/sec\n` +
-            `Errors: ${lastDetectError ?? "none"}\n` +
-            `Result: Live face detection actively locking onto face!`,
-        });
-      } else {
-        setT4({
-          status: "fail",
-          details:
-            `Processed ${framesProcessed} frames in 10s, but 0 faces were detected.\n` +
-            `Errors: ${lastDetectError ?? "none"}\n` +
-            `Diagnostic: Ensure your face is centered, well-lit, and visible in camera preview.`,
-        });
-      }
+      const passed = totalFacesDetected > 0 && !detectErrText;
+      setT4({
+        status: passed ? "pass" : "fail",
+        details:
+          `Frames processed: ${framesProcessed}\n` +
+          `Total faces detected: ${totalFacesDetected}\n` +
+          `Faces/second: ${facesPerSec}\n` +
+          `detectForVideo error: ${detectErrText ?? "none"}\n` +
+          `Result: ${passed ? "PASS (active face tracking)" : totalFacesDetected === 0 ? "FAIL (0 faces detected in 10s)" : "FAIL (detectForVideo error)"}`,
+      });
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -343,21 +342,21 @@ export function DebugScreen() {
 
         if (rois.length > 0) {
           const r = rois[0];
+          const sizeStr = `${(r.w * 100).toFixed(1)}% × ${(r.h * 100).toFixed(1)}%`;
           setT5({
             status: "pass",
             details:
-              `Skin ROI detected!\n` +
-              `Bounding box: x=${(r.x * 100).toFixed(1)}%, y=${(r.y * 100).toFixed(1)}%, ` +
-              `w=${(r.w * 100).toFixed(1)}%, h=${(r.h * 100).toFixed(1)}%\n` +
-              `Result: Loosened skin fallback is active and operational.`,
+              `Skin ROI found: Yes (PASS)\n` +
+              `ROI size: ${sizeStr} (at x=${(r.x * 100).toFixed(1)}%, y=${(r.y * 100).toFixed(1)}%)\n` +
+              `Result: PASS (Skin fallback operational)`,
           });
         } else {
           setT5({
             status: "fail",
             details:
-              `No skin ROI found.\n` +
-              `Less than 4% of pixels matched Cb (77–130) and Cr (130–180) skin-tone color space.\n` +
-              `Diagnostic: Lighting might be too dim or camera feed obstructed.`,
+              `Skin ROI found: No (FAIL)\n` +
+              `ROI size: None\n` +
+              `Result: FAIL (<4% skin pixels detected under current lighting)`,
           });
         }
       } catch (err) {

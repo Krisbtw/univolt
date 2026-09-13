@@ -1,924 +1,717 @@
 import { SpeakerButton } from "@/components/communication/speaker-button";
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SCAN_DURATION_MS, useRppgScan, type DebugInfo, type Status } from "../hooks/useRppgScan";
 import { evaluateTriage, type TriageResult } from "../lib/triage";
 import { getStrings, type Locale, type Strings } from "../lib/translations";
 import { useFusionSession } from "../lib/fusionStore";
 import { Link } from "@tanstack/react-router";
+import { AppFrame, AppHeader } from "@/components/app-shell";
+import { Button } from "@/components/ui/button";
 import {
-    clearScans,
-    loadLocale,
-    loadScans,
-    makeId,
-    saveLocale,
-    saveScan,
-    type ScanRecord,
+  clearScans,
+  loadLocale,
+  loadScans,
+  makeId,
+  saveLocale,
+  saveScan,
+  type ScanRecord,
 } from "../lib/vitalsDatabase";
+import {
+  Heart,
+  Activity,
+  Wind,
+  RotateCcw,
+  AlertTriangle,
+  CheckCircle2,
+  Share2,
+  Play,
+  Camera,
+  FileEdit,
+  Trash2,
+} from "lucide-react";
 
 export function VitalsScanScreen() {
-    const videoRef = useRef<HTMLVideoElement | null>(null);
-    const ppgCanvasRef = useRef<HTMLCanvasElement | null>(null);
-    const { state, actions } = useRppgScan({ videoRef, ppgCanvasRef });
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const ppgCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const { state, actions } = useRppgScan({ videoRef, ppgCanvasRef });
 
-    const [locale, setLocale] = useState<Locale>(() => loadLocale() ?? "en");
-    const t: Strings = useMemo(() => getStrings(locale), [locale]);
-    useEffect(() => {
-        saveLocale(locale);
-    }, [locale]);
+  const [locale, setLocale] = useState<Locale>(() => loadLocale() ?? "en");
+  const t: Strings = useMemo(() => getStrings(locale), [locale]);
+  useEffect(() => {
+    saveLocale(locale);
+  }, [locale]);
 
-    const triage: TriageResult | null = useMemo(
-        () => (state.result === null ? null : evaluateTriage(state.result)),
-        [state.result],
-    );
+  const triage: TriageResult | null = useMemo(
+    () => (state.result === null ? null : evaluateTriage(state.result)),
+    [state.result],
+  );
 
-    const startButtonEnabled = state.phase === "positioning" && state.roiActive;
-
-    // Debug HUD — toggled by ?debug=1 in the URL, never visible in normal demo
-    const [debugEnabled] = useState(() => {
-        try {
-            return new URLSearchParams(window.location.search).get("debug") === "1";
-        } catch {
-            return false;
-        }
-    });
-
-    const setRppg = useFusionSession((s) => s.setRppg);
-
-    const [history, setHistory] = useState<ScanRecord[]>(() => loadScans());
-    const savedScanIdsRef = useRef<Set<string>>(new Set());
-    useEffect(() => {
-        const result = state.result;
-        if (result === null || triage === null) return;
-        if (savedScanIdsRef.current.has(result.scanId)) return;
-        savedScanIdsRef.current.add(result.scanId);
-        saveScan({
-            id: result.scanId,
-            timestamp: result.timestamp,
-            mode: "live",
-            bpm: result.bpm,
-            hrv: result.hrv,
-            spo2: null,
-            rr: result.rr,
-            locale,
-            triageLevel: triage.level,
-        });
-        try {
-            window.localStorage.setItem("univolt.last.face.scan.id", result.scanId);
-        } catch {
-            // The scan remains usable even when local storage is unavailable.
-        }
-        // Task 2: feed rPPG result into the fusion session store
-        setRppg({ bpm: result.bpm, rr: result.rr, hrv: result.hrv, quality: result.quality });
-        setHistory(loadScans());
-    }, [state.result, triage, locale, setRppg]);
-
-    // --- Feature 5: Manual entry state ---
-    const [showManual, setShowManual] = useState(false);
-
-    const handleManualSave = useCallback(
-        (bpm: number, spo2: number, rr: number): void => {
-            const triage = evaluateTriage({ bpm, hrv: null, spo2, rr });
-            const record: ScanRecord = {
-                id: makeId(),
-                timestamp: Date.now(),
-                mode: "manual",
-                bpm,
-                hrv: null,
-                spo2,
-                rr,
-                locale,
-                triageLevel: triage.level,
-            };
-            saveScan(record);
-            setHistory(loadScans());
-            setShowManual(false);
-        },
-        [locale],
-    );
-
-    const handleClearHistory = useCallback((): void => {
-        clearScans();
-        setHistory([]);
-    }, []);
-
-    // ---- derived view state ----
-    const measuring = state.phase === "measuring";
-    const remainingSec = Math.max(0, Math.ceil((SCAN_DURATION_MS - state.progressMs) / 1000));
-    const progressPct = Math.min(100, (state.progressMs / SCAN_DURATION_MS) * 100);
-    const cameraGranted = state.permission === "granted";
-    const showPermissionFallback =
-        (state.permission === "denied" || state.permission === "unsupported") &&
-        (state.phase === "idle" || state.phase === "positioning");
-    const result = state.result;
-    const detected = result !== null && result.bpm !== null;
-
-    const statusText: string | null = (() => {
-        switch (state.status) {
-            case "loading_model":
-                return t.statusLoadingModel;
-            case "model_fallback":
-                return t.statusModelFallback;
-            case "no_face":
-                return t.statusNoFace;
-            case "motion":
-                return t.statusMotion;
-            case "low_light":
-                return t.statusLowLight;
-            case "weak_signal":
-                return t.statusWeakSignal;
-            default:
-                return null;
-        }
-    })();
-
-    return (
-        <div style={screenStyle}>
-            <div style={wrapStyle}>
-                <header style={headerStyle}>
-                    <div>
-                        <h1 style={titleStyle}>{t.appTitle}</h1>
-                        <p style={taglineStyle}>{t.tagline}</p>
-                    </div>
-                    <span style={liveBadgeStyle}>{t.liveBadge}</span>
-                </header>
-
-                <section style={cameraSectionStyle}>
-                    <video
-                        ref={videoRef}
-                        style={cameraGranted ? videoStyle : videoDimStyle}
-                        autoPlay
-                        playsInline
-                        muted
-                    />
-                    {cameraGranted && (state.phase === "positioning" || measuring) && (
-                        <div style={ovalGuideStyle} aria-hidden />
-                    )}
-                    {(state.phase === "positioning" || measuring) && (
-                        <div style={hudStyle}>
-                            <span style={hudTextStyle}>
-                                {state.phase === "positioning"
-                                    ? t.faceGuide
-                                    : `${t.measuringLabel}${t.separator}${remainingSec}${t.secUnit}`}
-                            </span>
-                            {statusText !== null && (
-                                <span style={statusPillStyle(state.status)}>{statusText}</span>
-                            )}
-                        </div>
-                    )}
-                    {measuring && (
-                        <div style={progressTrackStyle}>
-                            <div style={{ ...progressFillStyle, width: `${progressPct}%` }} />
-                        </div>
-                    )}
-                    <canvas ref={ppgCanvasRef} style={ppgCanvasStyle} />
-                    {debugEnabled && (
-                        <DebugHud info={state.debug} />
-                    )}
-                    {showPermissionFallback && (
-                        <PermissionFallback
-                            t={t}
-                            unsupported={state.permission === "unsupported"}
-                            onGrant={actions.requestCamera}
-                        />
-                    )}
-                </section>
-
-                {/* Manual start button during positioning */}
-                {state.phase === "positioning" && (
-                    <button
-                        id="btn-manual-start-scan"
-                        style={{
-                            ...primaryButtonStyle,
-                            opacity: state.roiActive ? 1 : 0.45,
-                            cursor: state.roiActive ? "pointer" : "not-allowed",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: 8,
-                            width: "100%",
-                        }}
-                        disabled={!state.roiActive}
-                        onClick={actions.startScan}
-                    >
-                        Start scan
-                    </button>
-                )}
-
-                {/* Feature 5: Manual entry toggle — shown when idle or permission denied */}
-                {(state.phase === "idle" || showPermissionFallback) && !showManual && (
-                    <button
-                        style={secondaryButtonStyle}
-                        onClick={() => setShowManual(true)}
-                    >
-                        📋 Camera failed? Enter vitals manually
-                    </button>
-                )}
-                {showManual && (
-                    <ManualEntryForm
-                        t={t}
-                        onSave={handleManualSave}
-                        onCancel={() => setShowManual(false)}
-                    />
-                )}
-
-                {result === null ? (
-                    <div style={metricsRowStyle}>
-                        <MetricTile
-                            label={t.metricHeartRate}
-                            value={measuring ? state.liveBpm : null}
-                            unit={t.metricHeartRateUnit}
-                            note={null}
-                            placeholder={t.placeholder}
-                            separator={t.separator}
-                            icon={METRIC_ICONS.heartRate}
-                        />
-                        <MetricTile
-                            label={t.metricHrv}
-                            value={null}
-                            unit={t.metricHrvUnit}
-                            note={null}
-                            placeholder={t.placeholder}
-                            separator={t.separator}
-                            icon={METRIC_ICONS.hrv}
-                        />
-                        <MetricTile
-                            label={t.metricRespRate}
-                            value={null}
-                            unit={t.metricRespRateUnit}
-                            note={t.metricRespRateNote}
-                            placeholder={t.placeholder}
-                            separator={t.separator}
-                            icon={METRIC_ICONS.respRate}
-                        />
-                    </div>
-                ) : detected ? (
-                    <>
-                        <div style={metricsRowStyle}>
-                            <MetricTile
-                                label={t.metricHeartRate}
-                                value={result.bpm}
-                                unit={t.metricHeartRateUnit}
-                                note={null}
-                                placeholder={t.placeholder}
-                                separator={t.separator}
-                                icon={METRIC_ICONS.heartRate}
-                            />
-                            <MetricTile
-                                label={t.metricHrv}
-                                value={result.hrv}
-                                unit={t.metricHrvUnit}
-                                note={null}
-                                placeholder={t.placeholder}
-                                separator={t.separator}
-                                icon={METRIC_ICONS.hrv}
-                            />
-                            <MetricTile
-                                label={t.metricRespRate}
-                                value={result.rr}
-                                unit={t.metricRespRateUnit}
-                                note={t.metricRespRateNote}
-                                placeholder={t.placeholder}
-                                separator={t.separator}
-                                icon={METRIC_ICONS.respRate}
-                            />
-                        </div>
-                        <p style={qualityStyle}>
-                            {`${t.qualityLabel}: ${result.quality === "good" ? t.qualityGood : t.qualityWeak}${t.separator}${result.snrDb.toFixed(1)} dB`}
-                        </p>
-                    </>
-                ) : (
-                    <div style={unableCardStyle}>
-                        <h3 style={unableTitleStyle}>{t.unableToDetect}</h3>
-                        <p style={unableBodyStyle}>{t.unableToDetectBody}</p>
-                    </div>
-                )}
-
-                {state.phase === "complete" && detected && triage !== null && (
-                    <GuidanceCard t={t} triage={triage} locale={locale} onSetLocale={setLocale} />
-                )}
-                {state.phase === "complete" && detected && (
-                    <Link to="/spo2" style={secondaryButtonStyle}>
-                        {t.spo2AddButton}
-                    </Link>
-                )}
-                {state.phase === "complete" && (
-                    <button style={primaryButtonStyle} onClick={actions.reset}>
-                        {t.newScanButton}
-                    </button>
-                )}
-
-                <HistoryList history={history} t={t} onClear={handleClearHistory} />
-                <p style={disclaimerStyle}>{t.disclaimer}</p>
-            </div>
-        </div>
-    );
-}
-
-// ---------- Debug HUD (only rendered when ?debug=1) ----------
-interface DebugHudProps { info: DebugInfo; }
-function DebugHud({ info }: DebugHudProps) {
-    const modelColor =
-        info.modelState === "ready" ? "#4ade80" :
-        info.modelState === "fallback" ? "#fbbf24" : "#f87171";
-    return (
-        <div style={debugHudStyle}>
-            <span style={{ color: modelColor }}>
-                modelState: {info.modelState}
-            </span>
-            <span>
-                video: ready={info.videoReady ? "yes" : "no"} {info.videoW}×{info.videoH}
-            </span>
-            <span style={{ color: info.facesPerSec > 0 ? "#4ade80" : "#f87171" }}>
-                faces/s: {info.facesPerSec}
-            </span>
-            <span style={{ color: info.roiSource !== "none" ? "#4ade80" : "#64748b" }}>
-                ROI source: {info.roiSource}
-            </span>
-        </div>
-    );
-}
-const debugHudStyle: CSSProperties = {
-    position: "absolute",
-    bottom: 104,
-    left: 0,
-    right: 0,
-    padding: "4px 8px",
-    display: "flex",
-    flexDirection: "column",
-    gap: 2,
-    background: "rgba(2,6,23,0.85)",
-    fontFamily: "monospace",
-    fontSize: 11,
-    color: "#94a3b8",
-    pointerEvents: "none",
-    zIndex: 10,
-};
-
-// ---------- sub-components (all copy comes from translations.ts) ----------
-// Feature 4: metric icons
-const METRIC_ICONS: Record<string, string> = {
-    heartRate: "❤️",
-    hrv: "💓",
-    respRate: "🫁",
-    spo2: "🩸",
-};
-
-interface MetricTileProps {
-    label: string;
-    value: number | null;
-    unit: string;
-    note: string | null;
-    placeholder: string;
-    separator: string;
-    icon?: string;
-}
-function MetricTile({ label, value, unit, note, placeholder, separator, icon }: MetricTileProps) {
-    return (
-        <div style={metricTileStyle}>
-            <span style={metricLabelStyle}>
-                {icon ? <span style={{ marginRight: 4 }}>{icon}</span> : null}{label}
-            </span>
-            <span style={metricValueStyle}>
-                {value === null ? placeholder : Math.round(value)}
-                <span style={metricUnitStyle}>{unit}</span>
-            </span>
-            {note !== null ? <span style={metricNoteStyle}>{`${separator}${note}`}</span> : null}
-        </div>
-    );
-}
-
-interface PermissionFallbackProps {
-    t: Strings;
-    unsupported: boolean;
-    onGrant: () => void;
-}
-function PermissionFallback({ t, unsupported, onGrant }: PermissionFallbackProps) {
-    return (
-        <div style={permissionCardStyle}>
-            <h3 style={permissionTitleStyle}>
-                {unsupported ? t.permissionUnsupportedTitle : t.permissionDeniedTitle}
-            </h3>
-            <p style={permissionBodyStyle}>
-                {unsupported ? t.permissionUnsupportedBody : t.permissionDeniedBody}
-            </p>
-            {!unsupported && (
-                <button style={primaryButtonStyle} onClick={onGrant}>
-                    {t.grantPermissionButton}
-                </button>
-            )}
-        </div>
-    );
-}
-
-interface GuidanceCardProps {
-    t: Strings;
-    triage: TriageResult;
-    locale: Locale;
-    onSetLocale: (locale: Locale) => void;
-}
-function GuidanceCard({ t, triage, locale, onSetLocale }: GuidanceCardProps) {
-    const branch = t.guidance.triage[triage.level];
-    const headingColor = triage.urgent ? "#f87171" : triage.referral ? "#fbbf24" : "#4ade80";
-
-    // Feature 3: SMS share
-    function handleSmsShare() {
-        const text = `[UniCare Health] ${branch.title}\n${branch.body}`;
-        window.open("sms:?body=" + encodeURIComponent(text));
+  // Debug HUD — toggled by ?debug=1 in the URL, never visible in normal demo
+  const [debugEnabled] = useState(() => {
+    try {
+      return new URLSearchParams(window.location.search).get("debug") === "1";
+    } catch {
+      return false;
     }
+  });
 
-    return (
-        <div style={guidanceCardStyle}>
-            <div style={guidanceHeaderStyle}>
-                <h3 style={{ ...guidanceTitleStyle, color: headingColor }}>{t.guidanceTitle}</h3>
-                <div style={languageRowStyle}>
-                    <span style={languageLabelStyle}>{t.languageLabel}</span>
-                    <button
-                        style={locale === "en" ? localeButtonActiveStyle : localeButtonStyle}
-                        onClick={() => onSetLocale("en")}
-                    >
-                        {t.localeNameEn}
-                    </button>
-                    <button
-                        style={locale === "hi" ? localeButtonActiveStyle : localeButtonStyle}
-                        onClick={() => onSetLocale("hi")}
-                    >
-                        {t.localeNameHi}
-                    </button>
-                </div>
-            </div>
-            <p style={guidanceIntroStyle}>{t.guidanceIntro}</p>
-            <h4 style={branchTitleStyle}>{branch.title}</h4>
-            <p style={branchBodyStyle}>{branch.body}</p>
-            {/* Read aloud (Mode A) — offline TTS, only on tap. */}
-            <SpeakerButton
-                text={`${branch.title}. ${branch.body}`}
-                locale={locale}
-                t={t}
-                className="mt-2"
+  const setRppg = useFusionSession((s) => s.setRppg);
+
+  const [history, setHistory] = useState<ScanRecord[]>(() => loadScans());
+  const savedScanIdsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const result = state.result;
+    if (result === null || triage === null) return;
+    if (savedScanIdsRef.current.has(result.scanId)) return;
+    savedScanIdsRef.current.add(result.scanId);
+    saveScan({
+      id: result.scanId,
+      timestamp: result.timestamp,
+      mode: "live",
+      bpm: result.bpm,
+      hrv: result.hrv,
+      spo2: null,
+      rr: result.rr,
+      locale,
+      triageLevel: triage.level,
+    });
+    try {
+      window.localStorage.setItem("univolt.last.face.scan.id", result.scanId);
+    } catch {
+      // The scan remains usable even when local storage is unavailable.
+    }
+    // Feed rPPG result into the fusion session store
+    setRppg({ bpm: result.bpm, rr: result.rr, hrv: result.hrv, quality: result.quality });
+    setHistory(loadScans());
+  }, [state.result, triage, locale, setRppg]);
+
+  // Manual entry state
+  const [showManual, setShowManual] = useState(false);
+
+  const handleManualSave = useCallback(
+    (bpm: number, spo2: number, rr: number): void => {
+      const triage = evaluateTriage({ bpm, hrv: null, spo2, rr });
+      const record: ScanRecord = {
+        id: makeId(),
+        timestamp: Date.now(),
+        mode: "manual",
+        bpm,
+        hrv: null,
+        spo2,
+        rr,
+        locale,
+        triageLevel: triage.level,
+      };
+      saveScan(record);
+      setHistory(loadScans());
+      setShowManual(false);
+    },
+    [locale],
+  );
+
+  const handleClearHistory = useCallback((): void => {
+    clearScans();
+    setHistory([]);
+  }, []);
+
+  // ---- derived view state ----
+  const measuring = state.phase === "measuring";
+  const remainingSec = Math.max(0, Math.ceil((SCAN_DURATION_MS - state.progressMs) / 1000));
+  const progressPct = Math.min(100, (state.progressMs / SCAN_DURATION_MS) * 100);
+  const cameraGranted = state.permission === "granted";
+  const showPermissionFallback =
+    (state.permission === "denied" || state.permission === "unsupported") &&
+    (state.phase === "idle" || state.phase === "positioning");
+  const result = state.result;
+  const detected = result !== null && result.bpm !== null;
+
+  const statusText: string | null = (() => {
+    switch (state.status) {
+      case "loading_model":
+        return t.statusLoadingModel;
+      case "model_fallback":
+        return t.statusModelFallback;
+      case "no_face":
+        return t.statusNoFace;
+      case "motion":
+        return t.statusMotion;
+      case "low_light":
+        return t.statusLowLight;
+      case "weak_signal":
+        return t.statusWeakSignal;
+      default:
+        return null;
+    }
+  })();
+
+  return (
+    <AppFrame>
+      <AppHeader
+        back={{ to: "/" }}
+        title={t.appTitle}
+        subtitle={t.tagline}
+      />
+
+      <main className="flex flex-1 flex-col gap-4 px-4 pb-12 pt-3 text-ink">
+        {/* Viewfinder Section */}
+        <section className="relative h-64 w-full overflow-hidden rounded-[20px] border border-line bg-black shadow-xs">
+          <video
+            ref={videoRef}
+            className={`h-full w-full object-cover [transform:scaleX(-1)] transition-opacity duration-300 ${
+              cameraGranted ? "opacity-90" : "opacity-20"
+            }`}
+            autoPlay
+            playsInline
+            muted
+          />
+
+          {/* Oval Face Guide */}
+          {cameraGranted && (state.phase === "positioning" || measuring) && (
+            <div
+              className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-48 w-36 rounded-[50%] border-2 border-dashed border-white/60 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]"
+              aria-hidden
             />
-            {triage.referral && (
-                <p style={referralStyle}>
-                    {triage.urgent ? (
-                        <strong style={urgentStyle}>{t.guidance.urgentPrefix}</strong>
-                    ) : null}
-                    {t.guidance.referralLine}
-                </p>
-            )}
-            {/* Feature 3: Share via SMS */}
-            <button style={smsButtonStyle} onClick={handleSmsShare}>
-                📱 Share via SMS / WhatsApp
-            </button>
+          )}
+
+          {/* Viewfinder Overlays & HUD */}
+          {(state.phase === "positioning" || measuring) && (
+            <div className="pointer-events-none absolute inset-x-0 top-3 flex flex-wrap items-center justify-center gap-2 px-3">
+              <span className="rounded-full border border-white/20 bg-black/60 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm shadow-xs">
+                {state.phase === "positioning"
+                  ? t.faceGuide
+                  : `${t.measuringLabel} · ${remainingSec}${t.secUnit}`}
+              </span>
+              {statusText !== null && (
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-semibold backdrop-blur-sm shadow-xs ${statusPillClasses(
+                    state.status,
+                  )}`}
+                >
+                  {statusText}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Measuring Progress Bar */}
+          {measuring && (
+            <div className="absolute bottom-20 left-4 right-4 h-1.5 overflow-hidden rounded-full bg-white/20 backdrop-blur-xs">
+              <div
+                className="h-full bg-emerald-400 transition-all duration-200"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+          )}
+
+          {/* PPG Waveform Canvas */}
+          <canvas
+            ref={ppgCanvasRef}
+            width={600}
+            height={140}
+            className="absolute bottom-0 left-0 right-0 h-20 w-full bg-black/40 backdrop-blur-xs"
+          />
+
+          {/* Debug HUD if ?debug=1 */}
+          {debugEnabled && <DebugHud info={state.debug} />}
+
+          {/* Permission Fallback Overlay */}
+          {showPermissionFallback && (
+            <PermissionFallback
+              t={t}
+              unsupported={state.permission === "unsupported"}
+              onGrant={actions.requestCamera}
+            />
+          )}
+        </section>
+
+        {/* Manual Start Button during Positioning */}
+        {state.phase === "positioning" && (
+          <Button
+            id="btn-manual-start-scan"
+            size="lg"
+            className="w-full gap-2 rounded-[16px] bg-pine py-3.5 text-sm font-semibold text-white shadow-xs hover:bg-pine/90 disabled:opacity-50"
+            disabled={!state.roiActive}
+            onClick={actions.startScan}
+          >
+            <Play className="size-4 fill-current" />
+            Start scan
+          </Button>
+        )}
+
+        {/* Manual Entry Form / Toggle */}
+        {(state.phase === "idle" || showPermissionFallback) && !showManual && (
+          <Button
+            variant="outline"
+            className="w-full gap-2 rounded-[16px] border-line bg-paper text-xs font-semibold text-ink shadow-xs hover:bg-surface"
+            onClick={() => setShowManual(true)}
+          >
+            <FileEdit className="size-3.5" />
+            Camera unavailable? Enter vitals manually
+          </Button>
+        )}
+
+        {showManual && (
+          <ManualEntryForm
+            t={t}
+            onSave={handleManualSave}
+            onCancel={() => setShowManual(false)}
+          />
+        )}
+
+        {/* Recorded Vitals Cards (Light Theme matching ReferralSlip) */}
+        <div className="flex flex-col gap-2">
+          <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted">
+            Recorded Vitals
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            <VitalTile
+              label="HR"
+              value={result ? result.bpm : measuring ? state.liveBpm : null}
+              unit={t.metricHeartRateUnit}
+              icon="❤️"
+              placeholder={t.placeholder}
+            />
+            <VitalTile
+              label="HRV"
+              value={result ? result.hrv : null}
+              unit={t.metricHrvUnit}
+              icon="💓"
+              placeholder={t.placeholder}
+            />
+            <VitalTile
+              label="RR"
+              value={result ? result.rr : null}
+              unit={t.metricRespRateUnit}
+              icon="🫁"
+              placeholder={t.placeholder}
+            />
+          </div>
+
+          {detected && result && (
+            <p className="mt-1 text-center text-xs font-medium text-muted">
+              {`${t.qualityLabel}: ${result.quality === "good" ? t.qualityGood : t.qualityWeak} · ${result.snrDb.toFixed(1)} dB`}
+            </p>
+          )}
         </div>
-    );
+
+        {/* Unable to Detect Warning */}
+        {state.phase === "complete" && !detected && (
+          <div className="rounded-[20px] border border-rose-200 bg-rose-50/80 p-4 shadow-xs">
+            <div className="flex items-center gap-2 text-rose-800">
+              <AlertTriangle className="size-4.5 shrink-0" />
+              <h3 className="text-sm font-bold">{t.unableToDetect}</h3>
+            </div>
+            <p className="mt-1 text-xs leading-relaxed text-rose-700">
+              {t.unableToDetectBody}
+            </p>
+          </div>
+        )}
+
+        {/* Guidance / Triage Card */}
+        {state.phase === "complete" && detected && triage !== null && (
+          <GuidanceCard
+            t={t}
+            triage={triage}
+            locale={locale}
+            onSetLocale={setLocale}
+          />
+        )}
+
+        {/* Action Buttons when Complete */}
+        {state.phase === "complete" && detected && (
+          <Link to="/spo2" className="w-full">
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full gap-2 rounded-[16px] border-line bg-paper text-xs font-semibold text-ink shadow-xs hover:bg-surface"
+            >
+              🩸 {t.spo2AddButton}
+            </Button>
+          </Link>
+        )}
+
+        {state.phase === "complete" && (
+          <Button
+            size="lg"
+            className="w-full gap-2 rounded-[16px] bg-pine text-white shadow-xs hover:bg-pine/90"
+            onClick={actions.reset}
+          >
+            <RotateCcw className="size-4" />
+            {t.newScanButton}
+          </Button>
+        )}
+
+        {/* Scan History */}
+        <HistoryList
+          history={history}
+          t={t}
+          onClear={handleClearHistory}
+        />
+
+        {/* Disclaimer */}
+        <p className="text-[11px] leading-relaxed text-muted text-center mt-1">
+          {t.disclaimer}
+        </p>
+      </main>
+    </AppFrame>
+  );
 }
 
-interface HistoryListProps {
-    history: ScanRecord[];
-    t: Strings;
-    onClear: () => void;
+// ---------- Sub-components ----------
+
+function VitalTile({
+  label,
+  value,
+  unit,
+  icon,
+  placeholder,
+}: {
+  label: string;
+  value: number | null;
+  unit: string;
+  icon: string;
+  placeholder: string;
+}) {
+  return (
+    <div className="flex flex-col justify-between rounded-[16px] border border-line bg-surface/80 p-3 shadow-xs">
+      <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted">
+        <span>{icon}</span> {label}
+      </span>
+      <span className="mt-1 font-display text-2xl font-bold tracking-tight text-ink">
+        {value === null ? (
+          <span className="text-muted/60">{placeholder}</span>
+        ) : (
+          Math.round(value)
+        )}
+        <span className="ml-1 text-xs font-normal text-muted">{unit}</span>
+      </span>
+    </div>
+  );
 }
-function HistoryList({ history, t, onClear }: HistoryListProps) {
-    return (
-        <div style={historyCardStyle}>
-            <div style={historyHeaderStyle}>
-                <h3 style={historyTitleStyle}>{t.historyTitle}</h3>
-                {history.length > 0 && (
-                    <button style={clearButtonStyle} onClick={onClear}>
-                        {t.clearHistoryButton}
-                    </button>
-                )}
-            </div>
-            {history.length === 0 ? (
-                <p style={historyEmptyStyle}>{t.historyEmpty}</p>
-            ) : (
-                <ul style={historyListStyle}>
-                    {history.map((record) => (
-                        <li key={record.id} style={historyRowStyle}>
-                            <span style={historyDateStyle}>{formatTimestamp(record.timestamp, record.locale)}</span>
-                            <span style={liveBadgeStyle}>
-                                {record.mode === "manual" ? "✍️ Manual" : t.liveBadge}
-                            </span>
-                            {/* Feature 4: icons in history rows */}
-                            <span style={historyMetricsStyle}>
-                                {`❤️ ${t.metricHeartRate}: ${record.bpm ?? t.placeholder} ${t.metricHeartRateUnit}${t.separator}🫁 ${t.metricRespRate}: ${record.rr ?? t.placeholder} ${t.metricRespRateUnit}${record.spo2 != null ? `${t.separator}🩸 SpO₂: ${record.spo2}%` : ""}`}
-                            </span>
-                            <span style={historyTriageStyle}>
-                                {t.guidance.triage[record.triageLevel].title}
-                            </span>
-                        </li>
-                    ))}
-                </ul>
-            )}
+
+function statusPillClasses(status: Status): string {
+  switch (status) {
+    case "ok":
+      return "border border-emerald-500/30 bg-emerald-950/70 text-emerald-300";
+    case "weak_signal":
+    case "model_fallback":
+      return "border border-amber-500/30 bg-amber-950/70 text-amber-300";
+    default:
+      return "border border-red-500/30 bg-red-950/70 text-red-300";
+  }
+}
+
+function GuidanceCard({
+  t,
+  triage,
+  locale,
+  onSetLocale,
+}: {
+  t: Strings;
+  triage: TriageResult;
+  locale: Locale;
+  onSetLocale: (locale: Locale) => void;
+}) {
+  const branch = t.guidance.triage[triage.level];
+  const isUrgent = triage.urgent;
+  const isReferral = triage.referral;
+
+  const bannerClass = isUrgent
+    ? "border-red-500/30 bg-red-500/10 text-red-800"
+    : isReferral
+    ? "border-amber-500/30 bg-amber-500/10 text-amber-900"
+    : "border-emerald-500/30 bg-emerald-500/10 text-emerald-900";
+
+  function handleSmsShare() {
+    const text = `[UniCare Health] ${branch.title}\n${branch.body}`;
+    window.open("sms:?body=" + encodeURIComponent(text));
+  }
+
+  return (
+    <div className="flex flex-col gap-3 rounded-[20px] border border-line bg-paper p-4 shadow-xs">
+      {/* Header & Language Switcher */}
+      <div className="flex items-center justify-between gap-2 border-b border-line/60 pb-3">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-muted">
+          {t.guidanceTitle}
+        </h3>
+        <div className="flex items-center gap-1.5 text-xs">
+          <button
+            type="button"
+            className={`rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors ${
+              locale === "en"
+                ? "bg-pine text-white"
+                : "bg-surface text-muted hover:bg-surface/80"
+            }`}
+            onClick={() => onSetLocale("en")}
+          >
+            {t.localeNameEn}
+          </button>
+          <button
+            type="button"
+            className={`rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors ${
+              locale === "hi"
+                ? "bg-pine text-white"
+                : "bg-surface text-muted hover:bg-surface/80"
+            }`}
+            onClick={() => onSetLocale("hi")}
+          >
+            {t.localeNameHi}
+          </button>
         </div>
-    );
+      </div>
+
+      {/* Triage Level Banner */}
+      <div className={`rounded-[16px] border p-3.5 ${bannerClass}`}>
+        <p className="font-display text-base font-bold leading-tight">
+          {branch.title}
+        </p>
+        <p className="mt-1 text-xs leading-relaxed opacity-90">{branch.body}</p>
+
+        {isReferral && (
+          <p className="mt-2 text-xs font-semibold">
+            {isUrgent ? <strong className="mr-1 text-red-600">{t.guidance.urgentPrefix}</strong> : null}
+            {t.guidance.referralLine}
+          </p>
+        )}
+      </div>
+
+      {/* TTS Read Aloud */}
+      <SpeakerButton
+        text={`${branch.title}. ${branch.body}`}
+        locale={locale}
+        t={t}
+        className="w-full"
+      />
+
+      {/* Share via SMS */}
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full gap-2 rounded-[12px] border-line bg-surface text-xs font-semibold text-ink hover:bg-surface/80"
+        onClick={handleSmsShare}
+      >
+        <Share2 className="size-3.5" />
+        Share via SMS / WhatsApp
+      </Button>
+    </div>
+  );
+}
+
+function HistoryList({
+  history,
+  t,
+  onClear,
+}: {
+  history: ScanRecord[];
+  t: Strings;
+  onClear: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-2 rounded-[20px] border border-line bg-paper p-4 shadow-xs">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-muted">
+          {t.historyTitle}
+        </h3>
+        {history.length > 0 && (
+          <button
+            type="button"
+            className="flex items-center gap-1 text-[11px] font-medium text-muted hover:text-red-600 transition-colors"
+            onClick={onClear}
+          >
+            <Trash2 className="size-3" />
+            {t.clearHistoryButton}
+          </button>
+        )}
+      </div>
+
+      {history.length === 0 ? (
+        <p className="text-xs text-muted py-2">{t.historyEmpty}</p>
+      ) : (
+        <ul className="flex flex-col gap-2 pt-1">
+          {history.map((record) => (
+            <li
+              key={record.id}
+              className="flex flex-col gap-1 rounded-[14px] border border-line/70 bg-surface/60 p-2.5 text-xs shadow-xs"
+            >
+              <div className="flex items-center justify-between text-[11px] text-muted">
+                <span>{formatTimestamp(record.timestamp, record.locale)}</span>
+                <span className="rounded-full bg-paper px-2 py-0.5 font-medium border border-line">
+                  {record.mode === "manual" ? "✍️ Manual" : "📹 Live"}
+                </span>
+              </div>
+              <p className="font-semibold text-ink">
+                {`❤️ HR: ${record.bpm ?? t.placeholder} bpm · 🫁 RR: ${record.rr ?? t.placeholder} /min`}
+                {record.spo2 != null ? ` · 🩸 SpO₂: ${record.spo2}%` : ""}
+              </p>
+              <p className="text-[11px] text-muted">
+                {t.guidance.triage[record.triageLevel]?.title}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function PermissionFallback({
+  t,
+  unsupported,
+  onGrant,
+}: {
+  t: Strings;
+  unsupported: boolean;
+  onGrant: () => void;
+}) {
+  return (
+    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2.5 bg-black/85 p-6 text-center text-white backdrop-blur-sm">
+      <Camera className="size-8 text-zinc-400" />
+      <h3 className="text-sm font-bold">
+        {unsupported ? t.permissionUnsupportedTitle : t.permissionDeniedTitle}
+      </h3>
+      <p className="text-xs text-zinc-300 max-w-xs leading-relaxed">
+        {unsupported ? t.permissionUnsupportedBody : t.permissionDeniedBody}
+      </p>
+      {!unsupported && (
+        <Button
+          size="sm"
+          className="mt-2 bg-pine text-white hover:bg-pine/90 font-semibold"
+          onClick={onGrant}
+        >
+          {t.grantPermissionButton}
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function ManualEntryForm({
+  t,
+  onSave,
+  onCancel,
+}: {
+  t: Strings;
+  onSave: (bpm: number, spo2: number, rr: number) => void;
+  onCancel: () => void;
+}) {
+  const [bpm, setBpm] = useState("");
+  const [spo2, setSpo2] = useState("");
+  const [rr, setRr] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  function handleSave() {
+    const b = parseInt(bpm, 10);
+    const s = parseInt(spo2, 10);
+    const r = parseInt(rr, 10);
+    if (isNaN(b) || b < 30 || b > 220) {
+      setError("Heart rate must be 30–220 BPM.");
+      return;
+    }
+    if (isNaN(s) || s < 70 || s > 100) {
+      setError("SpO₂ must be 70–100%.");
+      return;
+    }
+    if (isNaN(r) || r < 4 || r > 60) {
+      setError("Respiratory rate must be 4–60 /min.");
+      return;
+    }
+    setError(null);
+    onSave(b, s, r);
+  }
+
+  return (
+    <div className="flex flex-col gap-3 rounded-[20px] border border-line bg-paper p-4 shadow-xs">
+      <h3 className="text-sm font-bold text-ink">✍️ Manual Vitals Entry</h3>
+      {error && <p className="text-xs text-rose-600 font-medium">{error}</p>}
+
+      <div className="flex flex-col gap-2.5">
+        <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
+          ❤️ Heart Rate (BPM)
+          <input
+            type="number"
+            min={30}
+            max={220}
+            value={bpm}
+            onChange={(e) => setBpm(e.target.value)}
+            placeholder="e.g. 75"
+            className="rounded-[12px] border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-muted/50 focus:border-pine focus:outline-hidden"
+            inputMode="numeric"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
+          🩸 SpO₂ (%)
+          <input
+            type="number"
+            min={70}
+            max={100}
+            value={spo2}
+            onChange={(e) => setSpo2(e.target.value)}
+            placeholder="e.g. 97"
+            className="rounded-[12px] border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-muted/50 focus:border-pine focus:outline-hidden"
+            inputMode="numeric"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
+          🫁 Respiratory Rate (/min)
+          <input
+            type="number"
+            min={4}
+            max={60}
+            value={rr}
+            onChange={(e) => setRr(e.target.value)}
+            placeholder="e.g. 16"
+            className="rounded-[12px] border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-muted/50 focus:border-pine focus:outline-hidden"
+            inputMode="numeric"
+          />
+        </label>
+      </div>
+
+      <div className="flex gap-2 pt-1">
+        <Button
+          size="sm"
+          className="flex-1 bg-pine text-white hover:bg-pine/90 font-semibold rounded-[12px]"
+          onClick={handleSave}
+        >
+          Save Manual Scan
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="border-line bg-surface text-ink hover:bg-surface/80 rounded-[12px]"
+          onClick={onCancel}
+        >
+          Cancel
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function DebugHud({ info }: { info: DebugInfo }) {
+  const modelColor =
+    info.modelState === "ready"
+      ? "text-emerald-400"
+      : info.modelState === "fallback"
+      ? "text-amber-400"
+      : "text-rose-400";
+
+  return (
+    <div className="pointer-events-none absolute bottom-20 inset-x-0 flex flex-col gap-0.5 bg-black/80 px-2 py-1 font-mono text-[10px] text-zinc-300 z-10">
+      <span className={modelColor}>modelState: {info.modelState}</span>
+      <span>
+        video: ready={info.videoReady ? "yes" : "no"} {info.videoW}×{info.videoH}
+      </span>
+      <span className={info.facesPerSec > 0 ? "text-emerald-400" : "text-rose-400"}>
+        faces/s: {info.facesPerSec}
+      </span>
+      <span className={info.roiSource !== "none" ? "text-emerald-400" : "text-zinc-500"}>
+        ROI source: {info.roiSource}
+      </span>
+    </div>
+  );
 }
 
 function formatTimestamp(timestamp: number, locale: Locale): string {
-    const localeTag = locale === "hi" ? "hi-IN" : "en-IN";
-    return new Date(timestamp).toLocaleString(localeTag);
-}
-
-function statusColor(status: Status): string {
-    switch (status) {
-        case "ok":
-            return "#4ade80";
-        case "weak_signal":
-        case "model_fallback":
-            return "#fbbf24";
-        default:
-            return "#f87171";
-    }
-}
-
-// ---------- styles (module-level constants; never recreated per render) ----------
-const screenStyle: CSSProperties = {
-    minHeight: "100vh",
-    background: "#0b1120",
-    color: "#e2e8f0",
-    fontFamily: 'system-ui, "Segoe UI", sans-serif',
-    padding: "20px 16px 48px",
-    boxSizing: "border-box",
-};
-const wrapStyle: CSSProperties = {
-    maxWidth: 720,
-    margin: "0 auto",
-    display: "flex",
-    flexDirection: "column",
-    gap: 16,
-};
-const headerStyle: CSSProperties = {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 12,
-};
-const titleStyle: CSSProperties = { margin: 0, fontSize: 22, fontWeight: 700 };
-const taglineStyle: CSSProperties = { margin: "2px 0 0", fontSize: 13, color: "#94a3b8" };
-const liveBadgeStyle: CSSProperties = {
-    padding: "4px 10px",
-    borderRadius: 999,
-    fontSize: 11,
-    fontWeight: 700,
-    letterSpacing: 1,
-    background: "rgba(52,211,153,0.15)",
-    color: "#34d399",
-    border: "1px solid rgba(52,211,153,0.4)",
-    alignSelf: "flex-start",
-};
-const cameraSectionStyle: CSSProperties = {
-    position: "relative",
-    borderRadius: 14,
-    overflow: "hidden",
-    background: "#000",
-    border: "1px solid #1e293b",
-};
-const videoStyle: CSSProperties = {
-    display: "block",
-    width: "100%",
-    height: 300,
-    objectFit: "cover",
-    background: "#000",
-    transform: "scaleX(-1)", // mirror the front camera preview
-};
-const videoDimStyle: CSSProperties = { ...videoStyle, opacity: 0.2 };
-const ovalGuideStyle: CSSProperties = {
-    position: "absolute",
-    top: "50%",
-    left: "50%",
-    width: 190,
-    height: 240,
-    marginTop: -120,
-    marginLeft: -95,
-    borderRadius: "50%",
-    border: "2px dashed rgba(148,163,184,0.55)",
-    boxShadow: "0 0 0 9999px rgba(2,6,23,0.35)",
-    pointerEvents: "none",
-};
-const hudStyle: CSSProperties = {
-    position: "absolute",
-    top: 10,
-    left: 0,
-    right: 0,
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 8,
-    flexWrap: "wrap",
-    padding: "0 12px",
-};
-const hudTextStyle: CSSProperties = {
-    background: "rgba(2,6,23,0.72)",
-    padding: "6px 12px",
-    borderRadius: 999,
-    fontSize: 13,
-    fontWeight: 600,
-};
-const statusPill = (color: string): CSSProperties => ({
-    background: "rgba(2,6,23,0.72)",
-    color,
-    border: `1px solid ${color}55`,
-    padding: "5px 10px",
-    borderRadius: 999,
-    fontSize: 12,
-    fontWeight: 600,
-});
-function statusPillStyle(status: Status): CSSProperties {
-    return statusPill(statusColor(status));
-}
-const progressTrackStyle: CSSProperties = {
-    position: "absolute",
-    left: 12,
-    right: 12,
-    bottom: 104,
-    height: 6,
-    borderRadius: 999,
-    background: "rgba(255,255,255,0.12)",
-    overflow: "hidden",
-};
-const progressFillStyle: CSSProperties = {
-    height: "100%",
-    background: "#34d399",
-    transition: "width 0.25s linear",
-};
-const ppgCanvasStyle: CSSProperties = {
-    position: "absolute",
-    left: 0,
-    bottom: 0,
-    width: "100%",
-    height: 96,
-    background: "rgba(2,6,23,0.55)",
-};
-const metricsRowStyle: CSSProperties = {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-    gap: 12,
-};
-const metricTileStyle: CSSProperties = {
-    background: "#0f172a",
-    border: "1px solid #1e293b",
-    borderRadius: 12,
-    padding: "14px 16px",
-    display: "flex",
-    flexDirection: "column",
-    gap: 4,
-};
-const metricLabelStyle: CSSProperties = { fontSize: 12, color: "#94a3b8", fontWeight: 600 };
-const metricValueStyle: CSSProperties = { fontSize: 30, fontWeight: 700, lineHeight: 1.1 };
-const metricUnitStyle: CSSProperties = { fontSize: 13, marginLeft: 6, color: "#94a3b8" };
-const metricNoteStyle: CSSProperties = { fontSize: 11, color: "#64748b" };
-const qualityStyle: CSSProperties = { margin: 0, fontSize: 12, color: "#94a3b8" };
-const unableCardStyle: CSSProperties = {
-    background: "rgba(248,113,113,0.08)",
-    border: "1px solid rgba(248,113,113,0.35)",
-    borderRadius: 12,
-    padding: "16px 18px",
-};
-const unableTitleStyle: CSSProperties = {
-    margin: "0 0 6px",
-    fontSize: 18,
-    fontWeight: 700,
-    color: "#f87171",
-};
-const unableBodyStyle: CSSProperties = { margin: 0, fontSize: 14, color: "#cbd5e1" };
-const permissionCardStyle: CSSProperties = {
-    position: "absolute",
-    inset: 0,
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 10,
-    padding: 24,
-    textAlign: "center",
-    background: "rgba(2,6,23,0.88)",
-};
-const permissionTitleStyle: CSSProperties = { margin: 0, fontSize: 18, fontWeight: 700 };
-const permissionBodyStyle: CSSProperties = {
-    margin: 0,
-    fontSize: 13,
-    color: "#94a3b8",
-    maxWidth: 360,
-};
-const primaryButtonStyle: CSSProperties = {
-    background: "#34d399",
-    color: "#052e22",
-    border: "none",
-    borderRadius: 10,
-    padding: "12px 20px",
-    fontSize: 15,
-    fontWeight: 700,
-    cursor: "pointer",
-};
-const guidanceCardStyle: CSSProperties = {
-    background: "#0f172a",
-    border: "1px solid #1e293b",
-    borderRadius: 12,
-    padding: "16px 18px",
-};
-const guidanceHeaderStyle: CSSProperties = {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 12,
-    flexWrap: "wrap",
-};
-const guidanceTitleStyle: CSSProperties = { margin: 0, fontSize: 16, fontWeight: 700 };
-const languageRowStyle: CSSProperties = { display: "flex", alignItems: "center", gap: 6 };
-const languageLabelStyle: CSSProperties = { fontSize: 12, color: "#94a3b8" };
-const localeButtonStyle: CSSProperties = {
-    background: "transparent",
-    color: "#94a3b8",
-    border: "1px solid #334155",
-    borderRadius: 8,
-    padding: "5px 10px",
-    fontSize: 12,
-    cursor: "pointer",
-};
-const localeButtonActiveStyle: CSSProperties = {
-    ...localeButtonStyle,
-    color: "#34d399",
-    borderColor: "rgba(52,211,153,0.5)",
-};
-const guidanceIntroStyle: CSSProperties = {
-    margin: "10px 0 4px",
-    fontSize: 12,
-    color: "#94a3b8",
-};
-const branchTitleStyle: CSSProperties = { margin: "8px 0 4px", fontSize: 15, fontWeight: 700 };
-const branchBodyStyle: CSSProperties = {
-    margin: 0,
-    fontSize: 14,
-    lineHeight: 1.5,
-    color: "#cbd5e1",
-};
-const referralStyle: CSSProperties = {
-    margin: "10px 0 0",
-    fontSize: 13,
-    color: "#fbbf24",
-    fontWeight: 600,
-};
-const urgentStyle: CSSProperties = { color: "#f87171" };
-const historyCardStyle: CSSProperties = {
-    background: "#0f172a",
-    border: "1px solid #1e293b",
-    borderRadius: 12,
-    padding: "14px 16px",
-};
-const historyHeaderStyle: CSSProperties = {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 12,
-};
-const historyTitleStyle: CSSProperties = { margin: 0, fontSize: 15, fontWeight: 700 };
-const clearButtonStyle: CSSProperties = {
-    background: "transparent",
-    color: "#94a3b8",
-    border: "1px solid #334155",
-    borderRadius: 8,
-    padding: "5px 10px",
-    fontSize: 12,
-    cursor: "pointer",
-};
-const historyEmptyStyle: CSSProperties = { margin: "8px 0 0", fontSize: 13, color: "#64748b" };
-const historyListStyle: CSSProperties = {
-    listStyle: "none",
-    margin: "10px 0 0",
-    padding: 0,
-    display: "flex",
-    flexDirection: "column",
-    gap: 8,
-};
-const historyRowStyle: CSSProperties = {
-    display: "flex",
-    flexDirection: "column",
-    gap: 2,
-    padding: "8px 0",
-    borderBottom: "1px solid #1e293b",
-};
-const historyDateStyle: CSSProperties = { fontSize: 11, color: "#64748b" };
-const historyMetricsStyle: CSSProperties = { fontSize: 13, color: "#cbd5e1" };
-const historyTriageStyle: CSSProperties = { fontSize: 12, color: "#94a3b8" };
-const disclaimerStyle: CSSProperties = {
-    margin: 0,
-    fontSize: 11,
-    color: "#64748b",
-    textAlign: "center",
-};
-const secondaryButtonStyle: CSSProperties = {
-    background: "transparent",
-    color: "#94a3b8",
-    border: "1px solid #334155",
-    borderRadius: 10,
-    padding: "10px 16px",
-    fontSize: 13,
-    fontWeight: 600,
-    cursor: "pointer",
-    textAlign: "left",
-};
-const smsButtonStyle: CSSProperties = {
-    marginTop: 12,
-    background: "rgba(52,211,153,0.10)",
-    color: "#34d399",
-    border: "1px solid rgba(52,211,153,0.35)",
-    borderRadius: 8,
-    padding: "9px 14px",
-    fontSize: 13,
-    fontWeight: 600,
-    cursor: "pointer",
-    display: "block",
-    width: "100%",
-};
-const manualCardStyle: CSSProperties = {
-    background: "#0f172a",
-    border: "1px solid #1e293b",
-    borderRadius: 12,
-    padding: "16px 18px",
-    display: "flex",
-    flexDirection: "column",
-    gap: 12,
-};
-const manualLabelStyle: CSSProperties = { fontSize: 13, color: "#94a3b8", fontWeight: 600 };
-const manualInputStyle: CSSProperties = {
-    display: "block",
-    width: "100%",
-    background: "#020617",
-    border: "1px solid #334155",
-    borderRadius: 8,
-    padding: "10px 12px",
-    fontSize: 16,
-    color: "#e2e8f0",
-    marginTop: 4,
-    boxSizing: "border-box" as const,
-};
-
-// ── Feature 5: Manual vitals entry form ─────────────────────────────────────
-interface ManualEntryFormProps {
-    t: Strings;
-    onSave: (bpm: number, spo2: number, rr: number) => void;
-    onCancel: () => void;
-}
-function ManualEntryForm({ onSave, onCancel }: ManualEntryFormProps) {
-    const [bpm, setBpm] = useState("");
-    const [spo2, setSpo2] = useState("");
-    const [rr, setRr] = useState("");
-    const [error, setError] = useState<string | null>(null);
-
-    function handleSave() {
-        const b = parseInt(bpm, 10);
-        const s = parseInt(spo2, 10);
-        const r = parseInt(rr, 10);
-        if (isNaN(b) || b < 30 || b > 220) { setError("Heart rate must be 30–220 BPM."); return; }
-        if (isNaN(s) || s < 70 || s > 100) { setError("SpO₂ must be 70–100%."); return; }
-        if (isNaN(r) || r < 4 || r > 60) { setError("Respiratory rate must be 4–60 /min."); return; }
-        setError(null);
-        onSave(b, s, r);
-    }
-
-    return (
-        <div style={manualCardStyle}>
-            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>✍️ Manual Vitals Entry</h3>
-            {error && <p style={{ margin: 0, fontSize: 12, color: "#f87171" }}>{error}</p>}
-            <label style={manualLabelStyle}>
-                ❤️ Heart Rate (BPM)
-                <input
-                    type="number"
-                    min={30} max={220}
-                    value={bpm}
-                    onChange={(e) => setBpm(e.target.value)}
-                    placeholder="e.g. 75"
-                    style={manualInputStyle}
-                    inputMode="numeric"
-                />
-            </label>
-            <label style={manualLabelStyle}>
-                🩸 SpO₂ (%)
-                <input
-                    type="number"
-                    min={70} max={100}
-                    value={spo2}
-                    onChange={(e) => setSpo2(e.target.value)}
-                    placeholder="e.g. 97"
-                    style={manualInputStyle}
-                    inputMode="numeric"
-                />
-            </label>
-            <label style={manualLabelStyle}>
-                🫁 Respiratory Rate (/min)
-                <input
-                    type="number"
-                    min={4} max={60}
-                    value={rr}
-                    onChange={(e) => setRr(e.target.value)}
-                    placeholder="e.g. 16"
-                    style={manualInputStyle}
-                    inputMode="numeric"
-                />
-            </label>
-            <div style={{ display: "flex", gap: 8 }}>
-                <button style={primaryButtonStyle} onClick={handleSave}>Save Manual Scan</button>
-                <button style={secondaryButtonStyle} onClick={onCancel}>Cancel</button>
-            </div>
-        </div>
-    );
+  const localeTag = locale === "hi" ? "hi-IN" : "en-IN";
+  return new Date(timestamp).toLocaleString(localeTag);
 }

@@ -12,9 +12,11 @@ import {
     createFaceTracker,
     detectFace,
     foreheadCheekRoi,
-    getLastModelError,
+    lastModelError,
+    lastModelSource,
     loadFaceDetector,
     skinRegionRoi,
+    type ModelSource,
     type RoiRect,
 } from "../lib/faceDetector";
 import { analyzeRppg, liveWaveform, type RppgAnalysis, type RppgSample } from "../lib/rppgEngine";
@@ -68,6 +70,7 @@ export interface RppgScanState {
     progressMs: number;
     liveBpm: number | null;
     result: ScanResult | null;
+    roiActive: boolean;
 }
 
 type Action =
@@ -75,7 +78,7 @@ type Action =
     | { type: "STATUS"; status: Status }
     | { type: "START_MEASURING" }
     | { type: "ABORT_TO_POSITIONING"; status: Status }
-    | { type: "SNAPSHOT"; progressMs: number; liveBpm: number | null }
+    | { type: "SNAPSHOT"; progressMs: number; liveBpm: number | null; roiActive?: boolean }
     | { type: "COMPLETED"; result: ScanResult }
     | { type: "RESET" };
 
@@ -86,6 +89,7 @@ const INITIAL_STATE: RppgScanState = {
     progressMs: 0,
     liveBpm: null,
     result: null,
+    roiActive: false,
 };
 
 /**
@@ -116,6 +120,7 @@ function reducer(state: RppgScanState, action: Action): RppgScanState {
                 liveBpm: null,
                 result: null,
                 status: "ok",
+                roiActive: true,
             };
         case "ABORT_TO_POSITIONING":
             if (state.phase !== "measuring") return state;
@@ -125,10 +130,16 @@ function reducer(state: RppgScanState, action: Action): RppgScanState {
                 status: action.status,
                 progressMs: 0,
                 liveBpm: null,
+                roiActive: false,
             };
         case "SNAPSHOT":
-            if (state.phase !== "measuring") return state;
-            return { ...state, progressMs: action.progressMs, liveBpm: action.liveBpm };
+            if (state.phase !== "measuring" && state.phase !== "positioning") return state;
+            return {
+                ...state,
+                progressMs: action.progressMs,
+                liveBpm: action.liveBpm,
+                roiActive: action.roiActive !== undefined ? action.roiActive : state.roiActive,
+            };
         case "COMPLETED":
             if (state.phase !== "measuring") return state;
             return {
@@ -137,6 +148,7 @@ function reducer(state: RppgScanState, action: Action): RppgScanState {
                 progressMs: action.result.durationMs,
                 result: action.result,
                 liveBpm: action.result.bpm,
+                roiActive: false,
             };
         case "RESET":
             if (state.permission === "granted") {
@@ -145,9 +157,10 @@ function reducer(state: RppgScanState, action: Action): RppgScanState {
                     permission: state.permission,
                     phase: "positioning",
                     status: "ok",
+                    roiActive: false,
                 };
             }
-            return { ...INITIAL_STATE, permission: state.permission };
+            return { ...INITIAL_STATE, permission: state.permission, roiActive: false };
         default: {
             const exhaustive: never = action;
             return exhaustive;
@@ -202,13 +215,16 @@ export interface UseRppgScanOptions {
 /** Snapshot of internal state for the ?debug=1 overlay. */
 export interface DebugInfo {
     modelState: "loading" | "ready" | "fallback";
-    modelError: string | null;
+    lastModelSource: ModelSource;
+    lastModelError: string;
     videoReadyState: number;
     videoWidth: number;
     videoHeight: number;
     facesLastSec: number;
-    skinFallbackActive: boolean;
-    statusStr: string;
+    roiSource: "face" | "skin" | "none";
+    phase: Phase;
+    status: Status;
+    activeMs: number;
 }
 
 export interface UseRppgScanApi {
@@ -218,6 +234,7 @@ export interface UseRppgScanApi {
         requestCamera: () => void;
         releaseCamera: () => void;
         getDebugInfo: () => DebugInfo;
+        startScan: () => void;
     };
 }
 
@@ -247,6 +264,12 @@ export function useRppgScan({ videoRef, ppgCanvasRef }: UseRppgScanOptions): Use
     const faceLostSinceRef = useRef(0);
     const lowLightSinceRef = useRef(0);
     const motionStampsRef = useRef<number[]>([]);
+    // Track 500 ms debounce for presence
+    const lastRoiAtRef = useRef(0);
+    // Track consecutive moving frames (needs 2 to count as moving)
+    const consecutiveMovingRef = useRef(0);
+    // Track whether last processed frame had ROIs
+    const lastFrameHadRoiRef = useRef(false);
     // Debug HUD counters
     const faceCountSecRef = useRef(0);   // faces detected in rolling 1-sec window
     const faceStampsRef = useRef<number[]>([]); // timestamps of positive detections
@@ -315,15 +338,12 @@ export function useRppgScan({ videoRef, ppgCanvasRef }: UseRppgScanOptions): Use
     }, [videoRef]);
 
     // On mount: request camera + load the face detector in parallel.
-    // A hard 10-second timeout transitions "loading"→"fallback" so the skin-ROI
-    // fallback activates even if the Promise stalls (e.g. WASM fetch hanging).
     useEffect(() => {
         let alive = true;
         void startCamera();
 
-        // Hard-timeout guard: if the model hasn't loaded in LOAD_TIMEOUT_MS×2
-        // (two attempts), flip to fallback so the UI is never stuck in "loading".
-        const FALLBACK_AFTER_MS = 22_000;
+        // Hard-timeout guard: if the model hasn't loaded in 14 s, flip to fallback
+        const FALLBACK_AFTER_MS = 14_000;
         const fallbackTimer = setTimeout(() => {
             if (!alive) return;
             if (modelStateRef.current === "loading") {
@@ -435,19 +455,29 @@ export function useRppgScan({ videoRef, ppgCanvasRef }: UseRppgScanOptions): Use
                 const rawFace = detectFace(detectorRef.current, video, ts);
                 const tracked = trackerRef.current.update(rawFace);
                 if (tracked.box !== null) faceRois = foreheadCheekRoi(tracked.box);
-                moving = tracked.box !== null && tracked.motion > MOTION_PER_FRAME;
-            } else {
-                // Run skin-ROI fallback when modelState is "fallback" OR still
-                // "loading" — this prevents the "no face detected" dead-end
-                // during the ~12 MB WASM download.
+                const isSingleMoving = tracked.box !== null && tracked.motion > MOTION_PER_FRAME;
+                if (isSingleMoving) {
+                    consecutiveMovingRef.current += 1;
+                } else {
+                    consecutiveMovingRef.current = 0;
+                }
+                moving = consecutiveMovingRef.current >= 2;
+            } else if (modelStateRef.current === "fallback" || modelStateRef.current === "loading") {
+                // Run skin-ROI fallback when modelState is "fallback" OR still "loading"
                 faceRois = skinRegionRoi(pixels, PROCESS_W, PROCESS_H);
+                consecutiveMovingRef.current = 0;
+                moving = false;
             }
 
-            // --- Debug HUD: track faces per second ---
+            // --- Debug HUD: track faces per second & ROI active ---
             const isSkinFallback = modelStateRef.current !== "ready";
             lastSkinFallbackRef.current = isSkinFallback && faceRois.length > 0;
             if (faceRois.length > 0) {
+                lastRoiAtRef.current = now;
+                lastFrameHadRoiRef.current = true;
                 faceStampsRef.current.push(now);
+            } else {
+                lastFrameHadRoiRef.current = false;
             }
             // Purge stamps older than 1 s
             while (faceStampsRef.current.length > 0 && now - faceStampsRef.current[0] > 1000) {
@@ -457,7 +487,10 @@ export function useRppgScan({ videoRef, ppgCanvasRef }: UseRppgScanOptions): Use
 
             if (faceRois.length === 0) {
                 if (faceLostSinceRef.current === 0) faceLostSinceRef.current = now;
-                faceSeenSinceRef.current = 0;
+                // Debounce presence timer: only reset if no ROI has been seen for 500 ms
+                if (now - lastRoiAtRef.current >= 500) {
+                    faceSeenSinceRef.current = 0;
+                }
                 if (phase === "measuring" && now - faceLostSinceRef.current >= FACE_LOST_ABORT_MS) {
                     samplesRef.current = [];
                     activeMsRef.current = 0;
@@ -510,10 +543,14 @@ export function useRppgScan({ videoRef, ppgCanvasRef }: UseRppgScanOptions): Use
                 return { good: false };
             }
 
-            // --- positioning → auto-start when the face stays put for 1 s ---
+            // --- positioning → auto-start when the face stays put for 1 s, OR 2.5 s with motion ratio < 60% ---
             if (phase === "positioning") {
                 if (faceSeenSinceRef.current === 0) faceSeenSinceRef.current = now;
-                if (now - faceSeenSinceRef.current >= FACE_PRESENT_START_MS && !moving) {
+                const presenceMs = now - faceSeenSinceRef.current;
+                const shouldStart =
+                    (presenceMs >= FACE_PRESENT_START_MS && !moving) ||
+                    (presenceMs >= 2500 && motionRatio < 0.60);
+                if (shouldStart) {
                     samplesRef.current = [];
                     activeMsRef.current = 0;
                     stamps.length = 0;
@@ -559,22 +596,34 @@ export function useRppgScan({ videoRef, ppgCanvasRef }: UseRppgScanOptions): Use
             if (phaseRef.current === "measuring" && good) {
                 activeMsRef.current += dt;
                 drawWave(liveWaveform(samplesRef.current, PPG_WINDOW_MS));
-                if (now - lastCommitRef.current >= UI_COMMIT_INTERVAL_MS) {
-                    lastCommitRef.current = now;
+                if (activeMsRef.current >= SCAN_DURATION_MS) {
+                    finishScan();
+                }
+            }
+
+            // Commit numeric readouts & roiActive at ~2 Hz
+            if (now - lastCommitRef.current >= UI_COMMIT_INTERVAL_MS) {
+                lastCommitRef.current = now;
+                if (phaseRef.current === "measuring") {
                     const analysis = analyzeRppg(samplesRef.current);
                     dispatch({
                         type: "SNAPSHOT",
                         progressMs: activeMsRef.current,
                         liveBpm: analysis.bpm,
+                        roiActive: lastFrameHadRoiRef.current,
                     });
                     if (analysis.bpm === null && samplesRef.current.length > MIN_SIGNAL_SAMPLES) {
                         dispatch({ type: "STATUS", status: "weak_signal" });
                     } else {
                         dispatch({ type: "STATUS", status: "ok" });
                     }
-                }
-                if (activeMsRef.current >= SCAN_DURATION_MS) {
-                    finishScan();
+                } else if (phaseRef.current === "positioning") {
+                    dispatch({
+                        type: "SNAPSHOT",
+                        progressMs: 0,
+                        liveBpm: null,
+                        roiActive: lastFrameHadRoiRef.current,
+                    });
                 }
             }
         },
@@ -604,6 +653,9 @@ export function useRppgScan({ videoRef, ppgCanvasRef }: UseRppgScanOptions): Use
         faceSeenSinceRef.current = 0;
         faceLostSinceRef.current = 0;
         lowLightSinceRef.current = 0;
+        lastRoiAtRef.current = 0;
+        consecutiveMovingRef.current = 0;
+        lastFrameHadRoiRef.current = false;
         motionStampsRef.current = [];
         lastCommitRef.current = 0;
         trackerRef.current.reset();
@@ -620,23 +672,39 @@ export function useRppgScan({ videoRef, ppgCanvasRef }: UseRppgScanOptions): Use
         stopCamera();
     }, [stopCamera]);
 
+    const startScan = useCallback((): void => {
+        if (phaseRef.current !== "positioning") return;
+        samplesRef.current = [];
+        activeMsRef.current = 0;
+        motionStampsRef.current = [];
+        consecutiveMovingRef.current = 0;
+        dispatch({ type: "START_MEASURING" });
+    }, [dispatch]);
+
     const getDebugInfo = useCallback((): DebugInfo => {
         const video = videoRef.current;
+        let roiSource: "face" | "skin" | "none" = "none";
+        if (lastFrameHadRoiRef.current) {
+            roiSource = lastSkinFallbackRef.current ? "skin" : "face";
+        }
         return {
             modelState: modelStateRef.current,
-            modelError: getLastModelError(),
+            lastModelSource,
+            lastModelError,
             videoReadyState: video ? video.readyState : -1,
             videoWidth: video ? video.videoWidth : 0,
             videoHeight: video ? video.videoHeight : 0,
             facesLastSec: faceCountSecRef.current,
-            skinFallbackActive: lastSkinFallbackRef.current,
-            statusStr: state.status,
+            roiSource,
+            phase: phaseRef.current,
+            status: state.status,
+            activeMs: activeMsRef.current,
         };
     }, [state.status, videoRef]);
 
     const api = useMemo(
-        () => ({ state, actions: { reset, requestCamera, releaseCamera, getDebugInfo } }),
-        [state, reset, requestCamera, releaseCamera, getDebugInfo],
+        () => ({ state, actions: { reset, requestCamera, releaseCamera, getDebugInfo, startScan } }),
+        [state, reset, requestCamera, releaseCamera, getDebugInfo, startScan],
     );
     return api;
 }

@@ -31,6 +31,8 @@ export function VitalsScanScreen() {
         [state.result],
     );
 
+    const startButtonEnabled = state.phase === "positioning" && state.roiActive && state.status !== "low_light";
+
     // Debug HUD — toggled by ?debug=1 in the URL, never visible in normal demo
     const [debugEnabled] = useState(() => {
         try {
@@ -189,6 +191,27 @@ export function VitalsScanScreen() {
                     )}
                 </section>
 
+                {/* Manual start button during positioning — enabled when ROI active and not low light */}
+                {state.phase === "positioning" && cameraGranted && (
+                    <button
+                        id="btn-manual-start-scan"
+                        style={{
+                            ...primaryButtonStyle,
+                            opacity: startButtonEnabled ? 1 : 0.45,
+                            cursor: startButtonEnabled ? "pointer" : "not-allowed",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 8,
+                            width: "100%",
+                        }}
+                        disabled={!startButtonEnabled}
+                        onClick={actions.startScan}
+                    >
+                        ▶ Start scan
+                    </button>
+                )}
+
                 {/* Feature 5: Manual entry toggle — shown when idle or permission denied */}
                 {(state.phase === "idle" || showPermissionFallback) && !showManual && (
                     <button
@@ -308,21 +331,26 @@ function DebugHud({ info }: DebugHudProps) {
     return (
         <div style={debugHudStyle}>
             <span style={{ color: modelColor }}>
-                model:{info.modelState}
+                modelState: {info.modelState} ({info.lastModelSource})
             </span>
-            {info.modelError && (
-                <span style={{ color: "#f87171" }}>err:{info.modelError.slice(0, 60)}</span>
+            {info.lastModelError && info.lastModelError !== "none" && (
+                <span style={{ color: "#f87171" }}>err: {info.lastModelError.slice(0, 60)}</span>
             )}
             <span>
-                video:{info.videoReadyState} {info.videoWidth}×{info.videoHeight}
+                video: ready={info.videoReadyState} {info.videoWidth}×{info.videoHeight}
             </span>
             <span style={{ color: info.facesLastSec > 0 ? "#4ade80" : "#f87171" }}>
-                faces/s:{info.facesLastSec}
+                faces/s: {info.facesLastSec}
             </span>
-            <span style={{ color: info.skinFallbackActive ? "#fbbf24" : "#64748b" }}>
-                skin:{info.skinFallbackActive ? "ROI✓" : "none"}
+            <span style={{ color: info.roiSource !== "none" ? "#4ade80" : "#64748b" }}>
+                ROI source: {info.roiSource}
             </span>
-            <span>status:{info.statusStr}</span>
+            <span>
+                phase: {info.phase} | status: {info.status}
+            </span>
+            <span>
+                activeMs: {Math.round(info.activeMs)}ms
+            </span>
         </div>
     );
 }

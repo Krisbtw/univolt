@@ -51,14 +51,6 @@ export function VitalsScanScreen() {
       return false;
     }
   });
-  const [debugInfo, setDebugInfo] = useState<import("@/hooks/useRppgScan").DebugInfo | null>(null);
-  useEffect(() => {
-    if (!debugEnabled) return;
-    const interval = setInterval(() => {
-      setDebugInfo(actions.getDebugInfo());
-    }, 250);
-    return () => clearInterval(interval);
-  }, [debugEnabled, actions]);
 
   // Auto-save when a scan completes with a real reading — never persist a
   // rejected / null-BPM scan (that would fabricate a number for the record).
@@ -208,36 +200,33 @@ export function VitalsScanScreen() {
           </p>
 
           {/* Manual start button during positioning */}
-          {isPositioning && cameraGranted && (
+          {state.phase === "positioning" && (
             <Button
               id="btn-patient-start-scan"
               size="lg"
               className="mt-3 w-full bg-pine hover:bg-pine/90 text-white font-semibold py-3 rounded-[14px] flex items-center justify-center gap-2 disabled:opacity-40 disabled:pointer-events-none"
-              disabled={!state.roiActive || state.status === "low_light"}
+              disabled={!state.roiActive}
               onClick={actions.startScan}
             >
-              ▶ Start scan
+              Start scan
             </Button>
           )}
 
           {/* Debug HUD if ?debug=1 */}
-          {debugEnabled && debugInfo && (
+          {debugEnabled && (
             <div className="mt-3 p-2.5 rounded-[12px] bg-black/90 font-mono text-[11px] text-zinc-300 flex flex-col gap-1 border border-zinc-800">
-              <span className={debugInfo.modelState === "ready" ? "text-emerald-400" : "text-amber-400"}>
-                modelState: {debugInfo.modelState} ({debugInfo.lastModelSource})
+              <span className={state.debug.modelState === "ready" ? "text-emerald-400" : "text-amber-400"}>
+                modelState: {state.debug.modelState}
               </span>
-              {debugInfo.lastModelError && debugInfo.lastModelError !== "none" && (
-                <span className="text-red-400">err: {debugInfo.lastModelError.slice(0, 60)}</span>
-              )}
-              <span>video: ready={debugInfo.videoReadyState} {debugInfo.videoWidth}×{debugInfo.videoHeight}</span>
-              <span className={debugInfo.facesLastSec > 0 ? "text-emerald-400" : "text-red-400"}>
-                faces/s: {debugInfo.facesLastSec}
+              <span>video: ready={state.debug.videoReady ? "yes" : "no"} {state.debug.videoW}×{state.debug.videoH}</span>
+              <span className={state.debug.facesPerSec > 0 ? "text-emerald-400" : "text-red-400"}>
+                faces/s: {state.debug.facesPerSec}
               </span>
-              <span className={debugInfo.roiSource !== "none" ? "text-emerald-400" : "text-zinc-500"}>
-                ROI source: {debugInfo.roiSource}
+              <span className={state.debug.roiSource !== "none" ? "text-emerald-400" : "text-zinc-500"}>
+                ROI source: {state.debug.roiSource}
               </span>
-              <span>phase: {debugInfo.phase} | status: {debugInfo.status}</span>
-              <span>activeMs: {Math.round(debugInfo.activeMs)}ms</span>
+              <span>phase: {state.phase} | status: {state.status}</span>
+              <span>progress: {Math.round(state.progressMs)}ms</span>
             </div>
           )}
         </div>

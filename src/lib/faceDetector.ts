@@ -23,7 +23,9 @@ async function tryCreate(wasm: string, model: string): Promise<FaceDetector> {
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
     p,
-    new Promise<T>((_, reject) => setTimeout(() => reject(new Error("model load timeout")), ms)),
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error("model load timeout")), ms),
+    ),
   ]);
 }
 
@@ -53,10 +55,16 @@ export function loadFaceDetector(): Promise<FaceDetector | null> {
   return detectorPromise;
 }
 
-function clamp01(v: number): number { return Math.min(1, Math.max(0, v)); }
+function clamp01(v: number): number {
+  return Math.min(1, Math.max(0, v));
+}
 
 /** Largest face in the frame, normalized 0–1 coords. Logs errors instead of swallowing. */
-export function detectFace(detector: FaceDetector, video: HTMLVideoElement, tsMs: number): FaceBox | null {
+export function detectFace(
+  detector: FaceDetector,
+  video: HTMLVideoElement,
+  tsMs: number,
+): FaceBox | null {
   try {
     const res = detector.detectForVideo(video, tsMs);
     const detections = res.detections ?? [];
@@ -93,9 +101,13 @@ export function foreheadCheekRoi(box: FaceBox): RoiRect[] {
 }
 
 /** Loosened skin fallback — works while the model loads AND when it fails. */
-export function skinRegionRoi(pixels: Uint8ClampedArray, width: number, height: number): RoiRect[] {
+export function skinRegionRoi(
+  pixels: Uint8ClampedArray,
+  width: number,
+  height: number,
+): RoiRect[] {
   const x0 = Math.floor(width * 0.15), x1 = Math.floor(width * 0.85);
-  const y0 = Math.floor(height * 0.10), y1 = Math.floor(height * 0.90);
+  const y0 = Math.floor(height * 0.1), y1 = Math.floor(height * 0.9);
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   let count = 0, total = 0;
   for (let y = y0; y < y1; y++) {
@@ -107,8 +119,10 @@ export function skinRegionRoi(pixels: Uint8ClampedArray, width: number, height: 
       total += 1;
       if (cb >= 77 && cb <= 130 && cr >= 130 && cr <= 180) {
         count += 1;
-        if (x < minX) minX = x; if (x > maxX) maxX = x;
-        if (y < minY) minY = y; if (y > maxY) maxY = y;
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
       }
     }
   }

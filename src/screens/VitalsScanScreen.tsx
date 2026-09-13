@@ -31,7 +31,7 @@ export function VitalsScanScreen() {
         [state.result],
     );
 
-    const startButtonEnabled = state.phase === "positioning" && state.roiActive && state.status !== "low_light";
+    const startButtonEnabled = state.phase === "positioning" && state.roiActive;
 
     // Debug HUD — toggled by ?debug=1 in the URL, never visible in normal demo
     const [debugEnabled] = useState(() => {
@@ -41,14 +41,6 @@ export function VitalsScanScreen() {
             return false;
         }
     });
-    const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null);
-    useEffect(() => {
-        if (!debugEnabled) return;
-        const id = setInterval(() => {
-            setDebugInfo(actions.getDebugInfo());
-        }, 250);
-        return () => clearInterval(id);
-    }, [debugEnabled, actions]);
 
     const setRppg = useFusionSession((s) => s.setRppg);
 
@@ -179,8 +171,8 @@ export function VitalsScanScreen() {
                         </div>
                     )}
                     <canvas ref={ppgCanvasRef} style={ppgCanvasStyle} />
-                    {debugEnabled && debugInfo !== null && (
-                        <DebugHud info={debugInfo} />
+                    {debugEnabled && (
+                        <DebugHud info={state.debug} />
                     )}
                     {showPermissionFallback && (
                         <PermissionFallback
@@ -191,24 +183,24 @@ export function VitalsScanScreen() {
                     )}
                 </section>
 
-                {/* Manual start button during positioning — enabled when ROI active and not low light */}
-                {state.phase === "positioning" && cameraGranted && (
+                {/* Manual start button during positioning */}
+                {state.phase === "positioning" && (
                     <button
                         id="btn-manual-start-scan"
                         style={{
                             ...primaryButtonStyle,
-                            opacity: startButtonEnabled ? 1 : 0.45,
-                            cursor: startButtonEnabled ? "pointer" : "not-allowed",
+                            opacity: state.roiActive ? 1 : 0.45,
+                            cursor: state.roiActive ? "pointer" : "not-allowed",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
                             gap: 8,
                             width: "100%",
                         }}
-                        disabled={!startButtonEnabled}
+                        disabled={!state.roiActive}
                         onClick={actions.startScan}
                     >
-                        ▶ Start scan
+                        Start scan
                     </button>
                 )}
 
@@ -331,25 +323,16 @@ function DebugHud({ info }: DebugHudProps) {
     return (
         <div style={debugHudStyle}>
             <span style={{ color: modelColor }}>
-                modelState: {info.modelState} ({info.lastModelSource})
+                modelState: {info.modelState}
             </span>
-            {info.lastModelError && info.lastModelError !== "none" && (
-                <span style={{ color: "#f87171" }}>err: {info.lastModelError.slice(0, 60)}</span>
-            )}
             <span>
-                video: ready={info.videoReadyState} {info.videoWidth}×{info.videoHeight}
+                video: ready={info.videoReady ? "yes" : "no"} {info.videoW}×{info.videoH}
             </span>
-            <span style={{ color: info.facesLastSec > 0 ? "#4ade80" : "#f87171" }}>
-                faces/s: {info.facesLastSec}
+            <span style={{ color: info.facesPerSec > 0 ? "#4ade80" : "#f87171" }}>
+                faces/s: {info.facesPerSec}
             </span>
             <span style={{ color: info.roiSource !== "none" ? "#4ade80" : "#64748b" }}>
                 ROI source: {info.roiSource}
-            </span>
-            <span>
-                phase: {info.phase} | status: {info.status}
-            </span>
-            <span>
-                activeMs: {Math.round(info.activeMs)}ms
             </span>
         </div>
     );

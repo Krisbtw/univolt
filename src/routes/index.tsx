@@ -71,57 +71,58 @@ function HomeScreen() {
           ) : null}
         </div>
 
-        <div className="mt-4 flex items-center justify-between gap-2 flex-wrap">
+        <div className="mt-4 flex items-center justify-between gap-2">
           <h1 className="font-display text-2xl font-semibold tracking-[-0.03em] text-ink">
             Field roster
           </h1>
-          <div className="flex items-center gap-2">
-            {/* ── Feature 1: Sync to Clinic Node ── */}
-            <Button
-              id="btn-sync-clinic"
-              size="sm"
-              variant={syncState === "done" ? "outline" : "outline"}
-              onClick={handleSync}
-              disabled={syncState === "syncing" || pendingCount === 0}
-              className={`gap-1.5 transition-colors ${
-                syncState === "done"
-                  ? "border-pine/50 text-pine"
-                  : "border-line text-muted hover:text-ink"
-              }`}
-            >
-              {syncState === "syncing" ? (
-                <Loader2 className="size-3.5 animate-spin" />
-              ) : (
-                <CloudUpload className="size-3.5" />
-              )}
-              {syncState === "syncing"
-                ? "Searching for clinic node…"
-                : syncState === "done"
-                ? "✓ Records synced"
-                : `Sync to Clinic Node${pendingCount > 0 ? ` (${pendingCount})` : ""}`}
-            </Button>
-            <Button asChild size="sm" variant="outline" className="border-line text-muted hover:text-ink gap-1">
-              <Link to="/schemes">
-                🏥 Schemes
-              </Link>
-            </Button>
-            <Button asChild size="sm" variant="outline" className="border-line text-muted hover:text-ink gap-1">
-              <Link to="/awareness">
-                💡 Awareness
-              </Link>
-            </Button>
-            <Button asChild size="sm" variant="outline" className="border-line text-muted hover:text-ink gap-1">
-              <Link to="/staff">
-                👩‍⚕️ Staff
-              </Link>
-            </Button>
-            <Button asChild size="sm">
-              <Link to="/register">
-                <Plus className="size-4" />
-                Register
-              </Link>
-            </Button>
-          </div>
+          <Button asChild size="sm" className="gap-1.5 rounded-[10px] bg-pine hover:bg-pine/90 text-paper font-semibold shadow-sm">
+            <Link to="/register">
+              <Plus className="size-4" />
+              Register
+            </Link>
+          </Button>
+        </div>
+
+        {/* Quick Navigation & Sync Bar */}
+        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+          <Button
+            id="btn-sync-clinic"
+            size="sm"
+            variant="outline"
+            onClick={handleSync}
+            disabled={syncState === "syncing" || pendingCount === 0}
+            className={`gap-1.5 h-8 rounded-[10px] text-xs transition-colors ${
+              syncState === "done"
+                ? "border-pine/50 text-pine"
+                : "border-line text-muted hover:text-ink"
+            }`}
+          >
+            {syncState === "syncing" ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <CloudUpload className="size-3.5" />
+            )}
+            {syncState === "syncing"
+              ? "Syncing…"
+              : syncState === "done"
+              ? "✓ Synced"
+              : `Sync${pendingCount > 0 ? ` (${pendingCount})` : ""}`}
+          </Button>
+          <Button asChild size="sm" variant="outline" className="h-8 rounded-[10px] border-line text-muted hover:text-ink gap-1 text-xs">
+            <Link to="/schemes">
+              🏥 Schemes
+            </Link>
+          </Button>
+          <Button asChild size="sm" variant="outline" className="h-8 rounded-[10px] border-line text-muted hover:text-ink gap-1 text-xs">
+            <Link to="/awareness">
+              💡 Awareness
+            </Link>
+          </Button>
+          <Button asChild size="sm" variant="outline" className="h-8 rounded-[10px] border-line text-muted hover:text-ink gap-1 text-xs">
+            <Link to="/staff">
+              👩‍⚕️ Staff
+            </Link>
+          </Button>
         </div>
 
         <ul className="mt-3 flex flex-col gap-2.5">

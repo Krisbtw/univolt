@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 export function AppFrame({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-dvh bg-bg">
-      <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-surface shadow-[0_0_0_1px_var(--color-line)]">
+      <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-surface shadow-[0_0_0_1px_var(--color-line)] overflow-x-clip">
         {children}
       </div>
     </div>

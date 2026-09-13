@@ -10,7 +10,7 @@ export interface ScanRecord {
     bpm: number | null;
     hrv: number | null;
     spo2: number | null;
-    spo2Quality?: Spo2Quality;
+    spo2Quality?: Spo2Quality | "manual";
     rr: number | null;
     locale: Locale;
     triageLevel: TriageLevel;

@@ -1,5 +1,5 @@
-import type { Spo2Quality } from "../spo2Engine";
-export type { Spo2Quality } from "../spo2Engine";
+import type { Spo2Quality as EngineSpo2Quality } from "../spo2Engine";
+export type Spo2Quality = EngineSpo2Quality | "manual";
 
 export type Sex = "F" | "M" | "X";
 
@@ -63,8 +63,9 @@ export type VitalsScan = {
   /**
    * "scan"   = saved by the camera rPPG pipeline (default for existing records).
    * "manual" = manually entered pulse-oximeter / BP / temp equipment readings.
+   * "finger" = measured via fingertip rear-camera torch SpO2 scan.
    */
-  source?: "scan" | "manual";
+  source?: "scan" | "manual" | "finger";
   /** Manual clinic equipment readings (source: "manual") */
   bpSystolic?: number | null;
   bpDiastolic?: number | null;

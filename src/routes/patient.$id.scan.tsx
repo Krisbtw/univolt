@@ -149,7 +149,7 @@ export function VitalsScanScreen() {
             </div>
           </div>
 
-          {/* Camera viewfinder — mirrored front camera, no torch, no finger contact */}
+          {/* Camera viewfinder — mirrored front camera, no torch, contact-free */}
           <div className="relative h-56 w-full overflow-hidden rounded-[16px] bg-black">
             <video
               ref={videoRef}
@@ -204,7 +204,7 @@ export function VitalsScanScreen() {
 
           <p className="mt-2 px-1 text-[11px] text-trace/75">
             Front-camera remote PPG · CHROM chrominance over forehead &amp; cheeks — no
-            flashlight, no finger contact required
+            flashlight, no physical contact required
           </p>
 
           {/* Manual start button during positioning */}
@@ -271,7 +271,7 @@ export function VitalsScanScreen() {
             <p className="mt-1">
               Center your <strong className="text-ink">face</strong> in the oval and hold still —
               the scan starts automatically and measures heart rate from subtle color changes in
-              your skin, no fingertip contact needed.
+              your skin, no physical contact needed.
             </p>
           </div>
         ) : null}
@@ -326,13 +326,11 @@ export function VitalsScanScreen() {
               </>
             )}
             <div className="mt-4 flex flex-col gap-2">
-              {detected ? (
-                <Button asChild variant="secondary" size="lg" className="w-full">
-                  <Link to="/patient/$id/spo2" params={{ id: patient.id }}>
-                    {t.spo2AddButton}
-                  </Link>
-                </Button>
-              ) : null}
+              <Button asChild variant="secondary" size="lg" className="w-full" id="btn-patient-add-spo2">
+                <Link to="/patient/$id/spo2" params={{ id: patient.id }}>
+                  {t.spo2AddButton}
+                </Link>
+              </Button>
               {detected ? (
                 <Button asChild className="w-full" size="lg">
                   <Link to="/patient/$id" params={{ id: patient.id }}>

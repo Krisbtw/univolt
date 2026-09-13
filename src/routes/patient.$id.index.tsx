@@ -549,6 +549,22 @@ function PatientProfileScreen() {
           </Button>
         </div>
 
+        {/* SpO2 Fingertip Scan Button */}
+        <Button
+          asChild
+          id="btn-patient-add-spo2"
+          variant="secondary"
+          size="lg"
+          className="h-auto flex-col items-start gap-1 px-4 py-3.5 w-full border-pine/30 bg-pine/5 hover:bg-pine/10"
+        >
+          <Link to="/patient/$id/spo2" params={{ id: patient.id }}>
+            <span className="text-base leading-none">🩸</span>
+            <span className="text-left text-sm font-semibold text-pine dark:text-pine-fg">
+              {t.spo2AddButton}
+            </span>
+          </Link>
+        </Button>
+
         {/* Cough screening — suppress if patient marked as non-speaking */}
         {communicationProfile(patient).canSpeak ? (
           <Button

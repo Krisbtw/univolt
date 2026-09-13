@@ -59,4 +59,37 @@ check(
   "insufficient_data",
 );
 
+// ── Case 5: spo2 92 → phc_today ──────────────────────────────────────────────
+check(
+  "spo2=92",
+  evaluateFusion({
+    rppg: { bpm: 72, rr: 16, hrv: 40, quality: "good" },
+    spo2: { value: 92, quality: "good" },
+    symptoms: {},
+  }),
+  "phc_today",
+);
+
+// ── Case 6: spo2 89 → urgent ─────────────────────────────────────────────────
+check(
+  "spo2=89",
+  evaluateFusion({
+    rppg: { bpm: 72, rr: 16, hrv: 40, quality: "good" },
+    spo2: { value: 89, quality: "good" },
+    symptoms: {},
+  }),
+  "urgent",
+);
+
+// ── Case 7: spo2 85 with quality reject → ignored (self_care) ────────────────
+check(
+  "spo2=85 quality=reject",
+  evaluateFusion({
+    rppg: { bpm: 72, rr: 16, hrv: 40, quality: "good" },
+    spo2: { value: 85, quality: "reject" },
+    symptoms: {},
+  }),
+  "self_care",
+);
+
 console.log("\nAll acceptance tests passed ✓");

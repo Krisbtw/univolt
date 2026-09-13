@@ -47,6 +47,8 @@ type UnivoltState = {
   updateConsultStatus: (consultId: string, status: ConsultStatus, note?: string) => void;
   /** Import a complete clinic backup JSON, replacing local database state. */
   importDb: (imported: UnivoltDb) => { success: boolean; count: number };
+  /** Record a fingertip camera torch SpO₂ scan. */
+  addFingerSpo2: (patientId: string, spo2: number, quality: Spo2Quality) => void;
   /** Attach a camera SpO₂ result to the patient's latest face scan. */
   updateLatestVitalsSpo2: (patientId: string, spo2: number | null, quality: Spo2Quality) => void;
   /** Update optional emergency card medical fields for a patient. */
@@ -153,6 +155,29 @@ export const useUnivolt = create<UnivoltState>((set, get) => ({
       simulated: false,
       syncStatus: "local" as const,
       source: "manual" as const,
+    };
+    const db = touchVisit(get().db, patientId, at);
+    const next = { ...db, scans: [...db.scans, row] };
+    saveDb(next);
+    set({ db: next });
+  },
+  addFingerSpo2: (patientId, spo2, quality) => {
+    const at = Date.now();
+    const row = {
+      id: makeId("f"),
+      patientId,
+      capturedAt: at,
+      heartRate: 0,
+      hrvRmssd: 0,
+      signalQuality: quality === "good" ? 80 : 50,
+      respiratoryRate: 0,
+      spo2Estimate: Math.round(spo2),
+      spo2Quality: quality,
+      peakCount: 0,
+      durationSec: 20,
+      simulated: false,
+      syncStatus: "local" as const,
+      source: "finger" as const,
     };
     const db = touchVisit(get().db, patientId, at);
     const next = { ...db, scans: [...db.scans, row] };

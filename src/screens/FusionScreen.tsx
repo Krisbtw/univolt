@@ -176,6 +176,23 @@ export function FusionScreen() {
           </div>
         )}
 
+        {/* Applicable health schemes link */}
+        {(result.level === "urgent" || result.level === "phc_today") && (
+          <div style={{ textAlign: "center", margin: "4px 0" }}>
+            <Link
+              to="/schemes"
+              style={{
+                color: "#34d399",
+                fontSize: 14,
+                fontWeight: 600,
+                textDecoration: "underline",
+              }}
+            >
+              {t.schemesLinkFromFusion ?? "See applicable health schemes →"}
+            </Link>
+          </div>
+        )}
+
         {/* Nav links to all tests + referral */}
         <div style={navRowStyle}>
           <Link to={("/fet") as any} style={ctaLinkStyle}>🫁 Breathing Test</Link>

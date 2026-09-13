@@ -100,7 +100,7 @@ export function ReferralScreen() {
     if (!canvas) return;
     const link = document.createElement("a");
     link.href = canvas.toDataURL("image/png");
-    link.download = `univolt-referral-${payload?.id ?? "slip"}.png`;
+    link.download = `unicare-referral-${payload?.id ?? "slip"}.png`;
     link.click();
   }, [payload]);
 
@@ -250,6 +250,13 @@ export function ReferralScreen() {
               >
                 📷 Scan QR code
               </button>
+            </div>
+
+            {/* Health schemes link */}
+            <div style={{ textAlign: "center", marginTop: 8 }}>
+              <Link to="/schemes" style={{ color: "#34d399", fontSize: 13, textDecoration: "underline", fontWeight: 600 }}>
+                See applicable government health schemes →
+              </Link>
             </div>
           </>
         )}

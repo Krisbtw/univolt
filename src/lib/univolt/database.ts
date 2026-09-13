@@ -2,6 +2,7 @@ import type {
   CoughScreening,
   Patient,
   Sex,
+  TeleConsultRequest,
   UnivoltDb,
   VitalsScan,
 } from "./types";
@@ -17,6 +18,7 @@ function emptyDb(): UnivoltDb {
     patients: [],
     scans: [],
     coughs: [],
+    consults: [],
     meta: { seeded: false, version: DB_VERSION },
   };
 }
@@ -38,7 +40,12 @@ function daysAgo(days: number, hours = 10): number {
   return Date.now() - days * 86_400_000 - hours * 3_600_000;
 }
 
-function seedPatients(): { patients: Patient[]; scans: VitalsScan[]; coughs: CoughScreening[] } {
+function seedPatients(): {
+  patients: Patient[];
+  scans: VitalsScan[];
+  coughs: CoughScreening[];
+  consults: TeleConsultRequest[];
+} {
   const patients: Patient[] = [
     {
       id: "p-meera",
@@ -103,7 +110,7 @@ function seedPatients(): { patients: Patient[]; scans: VitalsScan[]; coughs: Cou
     cough("c-anjali-2", "p-anjali", daysAgo(1, 5), "Normal", false),
   ];
 
-  return { patients, scans, coughs };
+  return { patients, scans, coughs, consults: [] };
 }
 
 function scan(
@@ -114,7 +121,8 @@ function scan(
   hrvRmssd: number,
   signalQuality: number,
   respiratoryRate: number,
-  spo2Estimate: number,
+  spo2Estimate: number | null,
+  simulated = true,
 ): VitalsScan {
   return {
     id,
@@ -125,9 +133,10 @@ function scan(
     signalQuality,
     respiratoryRate,
     spo2Estimate,
-    peakCount: Math.round((heartRate / 60) * 12),
-    durationSec: 12,
-    simulated: true,
+    spo2Quality: spo2Estimate ? "good" : undefined,
+    peakCount: Math.round((heartRate * 30) / 60),
+    durationSec: 30,
+    simulated,
     syncStatus: "local",
     source: "scan" as const,
   };
@@ -170,10 +179,15 @@ function migrate(raw: unknown): UnivoltDb {
     source: s.source ?? "scan",
   }));
   const coughs = Array.isArray(db.coughs) ? db.coughs : [];
+  const consults = (Array.isArray(db.consults) ? db.consults : []).map((c) => ({
+    ...c,
+    status: c.status ?? "requested",
+  }));
   return {
     patients,
     scans,
     coughs,
+    consults,
     meta: {
       seeded: db.meta?.seeded ?? patients.length > 0,
       version: DB_VERSION,

@@ -45,7 +45,7 @@ export function AppHeader({
             <UnivoltMark />
             <div className="leading-tight">
               <p className="font-display text-[1.15rem] font-semibold tracking-[-0.03em] text-ink">
-                Univolt
+                UniCare
               </p>
               <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted">
                 Field vitals kit
@@ -72,7 +72,7 @@ export function BootScreen() {
     <div className="flex min-h-dvh items-center justify-center bg-bg">
       <div className="flex flex-col items-center gap-3">
         <UnivoltMark className="size-12" />
-        <p className="font-display text-xl font-semibold tracking-[-0.03em] text-ink">Univolt</p>
+        <p className="font-display text-xl font-semibold tracking-[-0.03em] text-ink">UniCare</p>
         <p className="text-sm text-muted">Loading field roster</p>
       </div>
     </div>

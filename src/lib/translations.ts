@@ -259,10 +259,119 @@ export interface Strings {
     gestureHelp: string;
     gesturePainLabel: string;
     gesturePainSentence: string;
+    // ── Intake questionnaire (gesture & tap mode) ──────────────────────────────
+    intakeTitle: string;
+    intakeCommStep: string;
+    intakeCommHint: string;
+    intakeCanSpeak: string;
+    intakeCanHear: string;
+    intakeCanRead: string;
+    intakeGestureMode: string;
+    intakeTapMode: string;
+    intakeYes: string;
+    intakeNo: string;
+    intakeBack: string;
+    intakeSkip: string;
+    intakeDone: string;
+    intakeGestureHint: string;
+    intakeGestureLoading: string;
+    intakeGestureUnavailable: string;
+    intakeGestureCameraBlocked: string;
+    intakeQBreathless: string;
+    intakeQChestPain: string;
+    intakeQFainting: string;
+    intakeQBleeding: string;
+    intakeQFever: string;
+    intakeQFeverDays: string;
+    intakeQPregnant: string;
+    intakeQAgeBand: string;
+    intakeAgeBand0: string;
+    intakeAgeBand1: string;
+    intakeAgeBand2: string;
+    intakeAgeBand3: string;
+    intakeAgeBand4: string;
+    intakeSaved: string;
+    // ── Staff triage view ─────────────────────────────────────────────────────
+    staffTitle: string;
+    staffSubtitle: string;
+    staffDemoNote: string;
+    staffNoPatients: string;
+    staffScanQr: string;
+    staffScanQrInstructions: string;
+    staffScanQrUnsupported: string;
+    staffManualIdLabel: string;
+    staffManualIdPlaceholder: string;
+    staffManualIdSubmit: string;
+    staffFilterAll: string;
+    staffFilterUrgent: string;
+    staffFilterPhc: string;
+    staffLastVisit: string;
+    staffNoVitals: string;
+    staffNotFound: string;
+    // ── Health schemes ────────────────────────────────────────────────────────
+    schemesTitle: string;
+    schemesSubtitle: string;
+    schemesVerifyFooter: string;
+    schemesOfficialPortal: string;
+    schemesWhatCovers: string;
+    schemesWhoFor: string;
+    schemesEnrollHow: string;
+    schemesDocuments: string;
+    schemesLinkFromFusion: string;
+    // ── Tele-Consultation Queue ───────────────────────────────────────────────
+    consultRequestBtn: string;
+    consultRequestedSuccess: string;
+    consultQueueTab: string;
+    triageListTab: string;
+    consultShareBtn: string;
+    consultShareNote: string;
+    consultStatusRequested: string;
+    consultStatusSent: string;
+    consultStatusCompleted: string;
+    consultMarkSent: string;
+    consultMarkCompleted: string;
+    consultAddNote: string;
+    consultNotesLabel: string;
+    consultNoRequests: string;
+    consultCopied: string;
+    consultPacketTitle: string;
+    consultDisclaimer: string;
+    // ── Health Awareness & Regional Advisories ────────────────────────────────
+    awarenessNav: string;
+    awarenessTitle: string;
+    awarenessSubtitle: string;
+    awarenessListenBtn: string;
+    awarenessStopBtn: string;
+    advisoriesTitle: string;
+    advisoriesBundledNotice: string;
+    advisoriesDistrictLabel: string;
+    advisoriesLastUpdated: string;
+    advisoriesActionsLabel: string;
+    advisoriesSeeFeverLink: string;
+    // ── EMR-Lite & Clinic Backup ──────────────────────────────────────────────
+    manualVitalsTitle: string;
+    manualVitalsDesc: string;
+    bpSystolicLabel: string;
+    bpDiastolicLabel: string;
+    tempLabel: string;
+    manualSaveBtn: string;
+    manualVitalsSaved: string;
+    sourceCamera: string;
+    sourceManual: string;
+    timelineTitle: string;
+    timelineSubtitle: string;
+    timelineEmpty: string;
+    backupExportBtn: string;
+    backupImportBtn: string;
+    backupImportSuccess: string;
+    backupImportError: string;
+    priorityUrgent: string;
+    priorityReview: string;
+    priorityRoutine: string;
 }
 
 const en: Strings = {
-    appTitle: "UniVolt Vitals",
+    appTitle: "UniCare Vitals",
     tagline: "Camera-based heart-rate scan (face rPPG)",
     liveBadge: "LIVE",
     metricHeartRate: "Heart Rate",
@@ -565,10 +674,119 @@ const en: Strings = {
     gestureHelp: "Please help me",
     gesturePainLabel: "Show 1–5 fingers for a pain level",
     gesturePainSentence: "Pain level {level}",
+    // Intake questionnaire
+    intakeTitle: "Health intake",
+    intakeCommStep: "Communication needs",
+    intakeCommHint: "Select any that apply. This is stored on the patient record.",
+    intakeCanSpeak: "Can speak",
+    intakeCanHear: "Can hear",
+    intakeCanRead: "Can read",
+    intakeGestureMode: "Gesture mode — patient answers by showing 👍 (Yes) or 👎 (No)",
+    intakeTapMode: "Tap Yes or No to answer each question",
+    intakeYes: "YES ✓",
+    intakeNo: "NO ✕",
+    intakeBack: "Back",
+    intakeSkip: "Skip",
+    intakeDone: "Save intake",
+    intakeGestureHint: "No gesture detected — you can tap instead",
+    intakeGestureLoading: "Loading gesture model…",
+    intakeGestureUnavailable: "Gesture recognition unavailable on this device",
+    intakeGestureCameraBlocked: "Camera access blocked — tap Yes or No to continue",
+    intakeQBreathless: "Feeling short of breath?",
+    intakeQChestPain: "Any chest pain?",
+    intakeQFainting: "Felt faint or lost consciousness?",
+    intakeQBleeding: "Any external bleeding?",
+    intakeQFever: "Fever?",
+    intakeQFeverDays: "Fever for more than 3 days?",
+    intakeQPregnant: "Currently pregnant?",
+    intakeQAgeBand: "Age group",
+    intakeAgeBand0: "Child (under 12)",
+    intakeAgeBand1: "Teen (12–17)",
+    intakeAgeBand2: "Adult (18–59)",
+    intakeAgeBand3: "Senior (60–74)",
+    intakeAgeBand4: "Elder (75+)",
+    intakeSaved: "Intake saved",
+    // Staff triage view
+    staffTitle: "Staff triage view",
+    staffSubtitle: "For review by a clinician. Not a diagnosis. For review between doctor visits.",
+    staffDemoNote: "Shared clinic tablet — demo",
+    staffNoPatients: "No patients registered yet.",
+    staffScanQr: "Scan patient QR",
+    staffScanQrInstructions: "Point the camera at the patient\u2019s QR code or emergency card.",
+    staffScanQrUnsupported: "QR scanning not supported in this browser. Enter the patient ID below.",
+    staffManualIdLabel: "Patient ID",
+    staffManualIdPlaceholder: "e.g. UV-001",
+    staffManualIdSubmit: "Go to patient",
+    staffFilterAll: "All",
+    staffFilterUrgent: "Urgent",
+    staffFilterPhc: "PHC today",
+    staffLastVisit: "Last visit",
+    staffNoVitals: "No vitals yet",
+    staffNotFound: "Patient not found",
+    // Health schemes
+    schemesTitle: "Government health schemes",
+    schemesSubtitle: "Real Indian government schemes relevant to rural patients. Informational only.",
+    schemesVerifyFooter: "Verify details on the official portal.",
+    schemesOfficialPortal: "Official portal",
+    schemesWhatCovers: "What it covers",
+    schemesWhoFor: "Who it\u2019s for",
+    schemesEnrollHow: "How to enroll",
+    schemesDocuments: "Documents needed",
+    schemesLinkFromFusion: "See applicable health schemes →",
+    // ── Tele-Consultation Queue ───────────────────────────────────────────────
+    consultRequestBtn: "Request Tele-Consult",
+    consultRequestedSuccess: "Tele-consult requested ✓",
+    consultQueueTab: "Consult queue",
+    triageListTab: "Triage list",
+    consultShareBtn: "Share consult summary",
+    consultShareNote: "Store-and-forward consult — hand the summary to the doctor by WhatsApp/SMS or at the next visit.",
+    consultStatusRequested: "Requested",
+    consultStatusSent: "Sent to doctor",
+    consultStatusCompleted: "Completed",
+    consultMarkSent: "Mark sent to doctor",
+    consultMarkCompleted: "Mark completed",
+    consultAddNote: "Add clinician note…",
+    consultNotesLabel: "Clinician note",
+    consultNoRequests: "No pending tele-consult requests in queue.",
+    consultCopied: "Consult summary copied to clipboard!",
+    consultPacketTitle: "STORE-AND-FORWARD TELE-CONSULT PACKET",
+    consultDisclaimer: "Store-and-forward screening summary. Confirm findings with clinical evaluation.",
+    // ── Health Awareness & Regional Advisories ────────────────────────────────
+    awarenessNav: "Awareness",
+    awarenessTitle: "Rural Health Literacy & Awareness",
+    awarenessSubtitle: "Essential preventative care guidance for rural communities. Listen or read.",
+    awarenessListenBtn: "Read aloud",
+    awarenessStopBtn: "Stop audio",
+    advisoriesTitle: "Regional Public Health Advisories",
+    advisoriesBundledNotice: "Bundled advisories — updated when the clinic device is online.",
+    advisoriesDistrictLabel: "Select district",
+    advisoriesLastUpdated: "Updated",
+    advisoriesActionsLabel: "Recommended actions",
+    advisoriesSeeFeverLink: "See fever & seasonal advisories →",
+    // ── EMR-Lite & Clinic Backup ──────────────────────────────────────────────
+    manualVitalsTitle: "Measured with clinic equipment",
+    manualVitalsDesc: "Enter readings taken using a blood pressure cuff, clinical thermometer, or pulse oximeter.",
+    bpSystolicLabel: "Systolic (mmHg)",
+    bpDiastolicLabel: "Diastolic (mmHg)",
+    tempLabel: "Temperature (°C)",
+    manualSaveBtn: "Save manual vitals",
+    manualVitalsSaved: "Manual vitals recorded ✓",
+    sourceCamera: "Camera scan",
+    sourceManual: "Equipment (Manual)",
+    timelineTitle: "Unified Patient History",
+    timelineSubtitle: "Chronological visit records, vitals, and consult status.",
+    timelineEmpty: "No clinical events recorded for this patient yet.",
+    backupExportBtn: "Export clinic backup",
+    backupImportBtn: "Import backup",
+    backupImportSuccess: "Clinic backup restored successfully!",
+    backupImportError: "Invalid backup file.",
+    priorityUrgent: "Urgent (Red)",
+    priorityReview: "Review (Yellow)",
+    priorityRoutine: "Routine (Green)",
 };
 
 const hi: Strings = {
-    appTitle: "यूनिवोल्ट वाइटल्स",
+    appTitle: "यूनिकेयर वाइटल्स",
     tagline: "कैमरे से चेहरे की नाड़ी जाँच (rPPG)",
     liveBadge: "लाइव",
     metricHeartRate: "हृदय गति",
@@ -871,6 +1089,115 @@ const hi: Strings = {
     gestureHelp: "कृपया मेरी मदद करें",
     gesturePainLabel: "दर्द का स्तर बताने के लिए 1–5 उँगलियाँ दिखाएँ",
     gesturePainSentence: "दर्द का स्तर {level}",
+    // Intake questionnaire
+    intakeTitle: "स्वास्थ्य जानकारी",
+    intakeCommStep: "संचार ज़रूरतें",
+    intakeCommHint: "जो भी लागू हो चुनें। यह मरीज़ के रिकॉर्ड में सेव होगा।",
+    intakeCanSpeak: "बोल सकते हैं",
+    intakeCanHear: "सुन सकते हैं",
+    intakeCanRead: "पढ़ सकते हैं",
+    intakeGestureMode: "इशारा मोड — मरीज़ 👍 (हाँ) या 👎 (नहीं) इशारा करके जवाब दें",
+    intakeTapMode: "हर सवाल पर हाँ या नहीं टैप करें",
+    intakeYes: "हाँ ✓",
+    intakeNo: "नहीं ✕",
+    intakeBack: "वापस",
+    intakeSkip: "छोड़ें",
+    intakeDone: "जानकारी सेव करें",
+    intakeGestureHint: "इशारा नहीं मिला — आप टैप भी कर सकते हैं",
+    intakeGestureLoading: "इशारा मॉडल लोड हो रहा है…",
+    intakeGestureUnavailable: "इस डिवाइस पर इशारा पहचान उपलब्ध नहीं",
+    intakeGestureCameraBlocked: "कैमरा अनुमति बंद है — जारी रखने के लिए हाँ या नहीं टैप करें",
+    intakeQBreathless: "साँस फूल रही है?",
+    intakeQChestPain: "सीने में दर्द है?",
+    intakeQFainting: "चक्कर आया या होश खोया?",
+    intakeQBleeding: "बाहरी खून बह रहा है?",
+    intakeQFever: "बुखार है?",
+    intakeQFeverDays: "3 दिन से ज़्यादा बुखार है?",
+    intakeQPregnant: "अभी गर्भवती हैं?",
+    intakeQAgeBand: "आयु वर्ग",
+    intakeAgeBand0: "बच्चा (12 से कम)",
+    intakeAgeBand1: "किशोर (12–17)",
+    intakeAgeBand2: "वयस्क (18–59)",
+    intakeAgeBand3: "वरिष्ठ (60–74)",
+    intakeAgeBand4: "बुज़ुर्ग (75+)",
+    intakeSaved: "जानकारी सेव हो गई",
+    // Staff triage view
+    staffTitle: "स्टाफ ट्राइज व्यू",
+    staffSubtitle: "चिकित्सक द्वारा समीक्षा के लिए। यह निदान नहीं है। डॉक्टर के दौरे के बीच समीक्षा के लिए।",
+    staffDemoNote: "साझा क्लिनिक टैबलेट — डेमो",
+    staffNoPatients: "अभी तक कोई मरीज़ पंजीकृत नहीं।",
+    staffScanQr: "मरीज़ QR स्कैन करें",
+    staffScanQrInstructions: "मरीज़ के QR कोड या आपात कार्ड पर कैमरा लगाएँ।",
+    staffScanQrUnsupported: "इस ब्राउज़र में QR स्कैन उपलब्ध नहीं। नीचे मरीज़ ID दर्ज करें।",
+    staffManualIdLabel: "मरीज़ ID",
+    staffManualIdPlaceholder: "जैसे UV-001",
+    staffManualIdSubmit: "मरीज़ खोलें",
+    staffFilterAll: "सभी",
+    staffFilterUrgent: "तत्काल",
+    staffFilterPhc: "आज PHC",
+    staffLastVisit: "अंतिम भेंट",
+    staffNoVitals: "अभी कोई माप नहीं",
+    staffNotFound: "मरीज़ नहीं मिला",
+    // Health schemes
+    schemesTitle: "सरकारी स्वास्थ्य योजनाएँ",
+    schemesSubtitle: "ग्रामीण मरीज़ों के लिए प्रासंगिक वास्तविक भारतीय सरकारी योजनाएँ। केवल जानकारी के लिए।",
+    schemesVerifyFooter: "आधिकारिक पोर्टल पर विवरण सत्यापित करें।",
+    schemesOfficialPortal: "आधिकारिक पोर्टल",
+    schemesWhatCovers: "क्या कवर करती है",
+    schemesWhoFor: "किसके लिए है",
+    schemesEnrollHow: "कैसे नामांकन करें",
+    schemesDocuments: "आवश्यक दस्तावेज़",
+    schemesLinkFromFusion: "लागू स्वास्थ्य योजनाएँ देखें →",
+    // ── Tele-Consultation Queue ───────────────────────────────────────────────
+    consultRequestBtn: "टेली-परामर्श अनुरोध करें",
+    consultRequestedSuccess: "टेली-परामर्श अनुरोध सहेजा गया ✓",
+    consultQueueTab: "परामर्श कतार",
+    triageListTab: "ट्राइज सूची",
+    consultShareBtn: "परामर्श सारांश साझा करें",
+    consultShareNote: "स्टोर-एंड-फॉरवर्ड परामर्श — डॉक्टर को व्हाट्सएप/एसएमएस या अगली भेंट पर यह सारांश दें।",
+    consultStatusRequested: "अनुरोधित",
+    consultStatusSent: "डॉक्टर को भेजा गया",
+    consultStatusCompleted: "पूर्ण",
+    consultMarkSent: "डॉक्टर को भेजा गया चिह्नित करें",
+    consultMarkCompleted: "पूर्ण चिह्नित करें",
+    consultAddNote: "क्लिनिकल टिप्पणी लिखें…",
+    consultNotesLabel: "क्लिनिकल टिप्पणी",
+    consultNoRequests: "कतार में कोई लंबित टेली-परामर्श अनुरोध नहीं है।",
+    consultCopied: "परामर्श सारांश क्लिपबोर्ड पर कॉपी हो गया!",
+    consultPacketTitle: "स्टोर-एंड-फॉरवर्ड टेली-परामर्श पैकेट",
+    consultDisclaimer: "स्टोर-एंड-फॉरवर्ड स्क्रीनिंग सारांश। चिकित्सकीय परीक्षण द्वारा पुष्टि करें।",
+    // ── Health Awareness & Regional Advisories ────────────────────────────────
+    awarenessNav: "स्वास्थ्य ज्ञान",
+    awarenessTitle: "ग्रामीण स्वास्थ्य जागरूकता एवं साक्षरता",
+    awarenessSubtitle: "ग्रामीण परिवारों के लिए आवश्यक रोकथाम और प्राथमिक देखभाल। सुनें या पढ़ें।",
+    awarenessListenBtn: "बोलकर सुनाएँ",
+    awarenessStopBtn: "रोकें",
+    advisoriesTitle: "क्षेत्रीय जन स्वास्थ्य परामर्श",
+    advisoriesBundledNotice: "बंडल किए गए परामर्श — क्लिनिक डिवाइस ऑनलाइन होने पर अद्यतन होते हैं।",
+    advisoriesDistrictLabel: "जिला चुनें",
+    advisoriesLastUpdated: "अद्यतन",
+    advisoriesActionsLabel: "अनुशंसित सावधानियाँ",
+    advisoriesSeeFeverLink: "बुखार व मौसमी स्वास्थ्य परामर्श देखें →",
+    // ── EMR-Lite & Clinic Backup ──────────────────────────────────────────────
+    manualVitalsTitle: "क्लिनिक उपकरणों द्वारा मापा गया",
+    manualVitalsDesc: "बीपी कफ, थर्मामीटर या पल्स ऑक्सीमीटर से लिए गए माप यहाँ दर्ज करें।",
+    bpSystolicLabel: "सिस्टोलिक (ऊपरी)",
+    bpDiastolicLabel: "डायस्टोलिक (निचला)",
+    tempLabel: "तापमान (°C)",
+    manualSaveBtn: "माप सुरक्षित करें",
+    manualVitalsSaved: "माप सहेजे गए ✓",
+    sourceCamera: "कैमरा स्कैन",
+    sourceManual: "उपकरण (मैन्युअल)",
+    timelineTitle: "एकीकृत मरीज़ इतिहास",
+    timelineSubtitle: "तिथि अनुसार भेंट विवरण, माप और परामर्श स्थिति।",
+    timelineEmpty: "इस मरीज़ के लिए अभी तक कोई रिकॉर्ड नहीं है।",
+    backupExportBtn: "क्लिनिक बैकअप डाउनलोड करें",
+    backupImportBtn: "बैकअप आयात करें",
+    backupImportSuccess: "क्लिनिक बैकअप सफलतापूर्वक बहाल किया गया!",
+    backupImportError: "अमान्य बैकअप फ़ाइल।",
+    priorityUrgent: "तत्काल (लाल)",
+    priorityReview: "समीक्षा (पीला)",
+    priorityRoutine: "सामान्य (हरा)",
 };
 
 const STRINGS: Record<Locale, Strings> = { en, hi };

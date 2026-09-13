@@ -19,3 +19,5 @@ export function UnivoltMark({ className }: { className?: string }) {
     </svg>
   );
 }
+
+export const UniCareMark = UnivoltMark;

@@ -411,7 +411,7 @@ function GuidanceCard({ t, triage, locale, onSetLocale }: GuidanceCardProps) {
 
     // Feature 3: SMS share
     function handleSmsShare() {
-        const text = `[Univolt Health] ${branch.title}\n${branch.body}`;
+        const text = `[UniCare Health] ${branch.title}\n${branch.body}`;
         window.open("sms:?body=" + encodeURIComponent(text));
     }
 

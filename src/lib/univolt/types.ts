@@ -62,9 +62,38 @@ export type VitalsScan = {
   syncStatus: SyncStatus;
   /**
    * "scan"   = saved by the camera rPPG pipeline (default for existing records).
-   * "manual" = manually entered pulse-oximeter SpO₂ point.
+   * "manual" = manually entered pulse-oximeter / BP / temp equipment readings.
    */
   source?: "scan" | "manual";
+  /** Manual clinic equipment readings (source: "manual") */
+  bpSystolic?: number | null;
+  bpDiastolic?: number | null;
+  temperatureC?: number | null;
+};
+
+export type PriorityFlag = "green" | "yellow" | "red";
+
+export type ConsultStatus = "requested" | "sent" | "completed";
+
+export type TeleConsultRequest = {
+  id: string;
+  patientId: string;
+  createdAt: number;
+  updatedAt: number;
+  triageLevel: "urgent" | "phc_today" | "self_care" | "insufficient_data";
+  vitals: {
+    hr?: number | null;
+    rr?: number | null;
+    spo2?: number | null;
+    bpSystolic?: number | null;
+    bpDiastolic?: number | null;
+    temperatureC?: number | null;
+    cameraSpo2Quality?: string | null;
+  };
+  symptoms?: Record<string, boolean | number>;
+  reasons: string[];
+  status: ConsultStatus;
+  notes?: string;
 };
 
 export type CoughScreening = {
@@ -84,6 +113,7 @@ export type UnivoltDb = {
   patients: Patient[];
   scans: VitalsScan[];
   coughs: CoughScreening[];
+  consults: TeleConsultRequest[];
   meta: {
     seeded: boolean;
     version: number;

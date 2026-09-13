@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { latestCough, latestScan, useUnivolt } from "@/lib/univolt/store";
 import { evaluateTriage } from "@/lib/triage";
+import { getPriorityFromVitals, priorityMeta } from "@/lib/priority";
 import type { Patient, VitalsScan } from "@/lib/univolt/types";
 
 export const Route = createFileRoute("/")({ component: HomeScreen });
@@ -99,6 +100,21 @@ function HomeScreen() {
                 ? "✓ Records synced"
                 : `Sync to Clinic Node${pendingCount > 0 ? ` (${pendingCount})` : ""}`}
             </Button>
+            <Button asChild size="sm" variant="outline" className="border-line text-muted hover:text-ink gap-1">
+              <Link to="/schemes">
+                🏥 Schemes
+              </Link>
+            </Button>
+            <Button asChild size="sm" variant="outline" className="border-line text-muted hover:text-ink gap-1">
+              <Link to="/awareness">
+                💡 Awareness
+              </Link>
+            </Button>
+            <Button asChild size="sm" variant="outline" className="border-line text-muted hover:text-ink gap-1">
+              <Link to="/staff">
+                👩‍⚕️ Staff
+              </Link>
+            </Button>
             <Button asChild size="sm">
               <Link to="/register">
                 <Plus className="size-4" />
@@ -146,6 +162,16 @@ function PatientRow({ patient }: { patient: Patient }) {
   const vitalsFollowUp = scanNeedsFollowUp(scan);
   const needsFollowUp = coughFollowUp || vitalsFollowUp;
 
+  const priority = getPriorityFromVitals({
+    bpm: scan?.heartRate,
+    spo2: scan?.spo2Estimate,
+    rr: scan?.respiratoryRate,
+    tempC: scan?.temperatureC,
+    bpSys: scan?.bpSystolic,
+    bpDia: scan?.bpDiastolic,
+  });
+  const meta = priorityMeta(priority);
+
   return (
     <li>
       <Link
@@ -173,8 +199,14 @@ function PatientRow({ patient }: { patient: Patient }) {
               </p>
             </div>
           </div>
-          <div className="flex flex-col items-end gap-1 shrink-0">
-            <Badge variant="muted">{patient.caseId}</Badge>
+          <div className="flex flex-col items-end gap-1.5 shrink-0">
+            <div className="flex items-center gap-1.5">
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold border flex items-center gap-1 ${meta.badgeBg} ${meta.badgeBorder} ${meta.textColor}`}>
+                <span>{meta.emoji}</span>
+                <span>{meta.labelEn}</span>
+              </span>
+              <Badge variant="muted">{patient.caseId}</Badge>
+            </div>
             {needsFollowUp && (
               <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-semibold text-red-400 border border-red-500/30">
                 Follow-up Required

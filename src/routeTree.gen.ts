@@ -10,24 +10,33 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AwarenessRouteImport } from './routes/awareness'
 import { Route as CrtRouteImport } from './routes/crt'
 import { Route as FetRouteImport } from './routes/fet'
 import { Route as FusionRouteImport } from './routes/fusion'
 import { Route as ReferralRouteImport } from './routes/referral'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ScanRouteImport } from './routes/scan'
+import { Route as SchemesRouteImport } from './routes/schemes'
 import { Route as Spo2RouteImport } from './routes/spo2'
+import { Route as StaffRouteImport } from './routes/staff'
 import { Route as EmergencyIdRouteImport } from './routes/emergency.$id'
 import { Route as PatientIdRouteImport } from './routes/patient.$id'
 import { Route as PatientIdIndexRouteImport } from './routes/patient.$id.index'
 import { Route as PatientIdCoughRouteImport } from './routes/patient.$id.cough'
 import { Route as PatientIdGestureRouteImport } from './routes/patient.$id.gesture'
+import { Route as PatientIdIntakeRouteImport } from './routes/patient.$id.intake'
 import { Route as PatientIdScanRouteImport } from './routes/patient.$id.scan'
 import { Route as PatientIdSpo2RouteImport } from './routes/patient.$id.spo2'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AwarenessRoute = AwarenessRouteImport.update({
+  id: '/awareness',
+  path: '/awareness',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CrtRoute = CrtRouteImport.update({
@@ -60,9 +69,19 @@ const ScanRoute = ScanRouteImport.update({
   path: '/scan',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SchemesRoute = SchemesRouteImport.update({
+  id: '/schemes',
+  path: '/schemes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const Spo2Route = Spo2RouteImport.update({
   id: '/spo2',
   path: '/spo2',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StaffRoute = StaffRouteImport.update({
+  id: '/staff',
+  path: '/staff',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EmergencyIdRoute = EmergencyIdRouteImport.update({
@@ -90,6 +109,11 @@ const PatientIdGestureRoute = PatientIdGestureRouteImport.update({
   path: '/gesture',
   getParentRoute: () => PatientIdRoute,
 } as any)
+const PatientIdIntakeRoute = PatientIdIntakeRouteImport.update({
+  id: '/intake',
+  path: '/intake',
+  getParentRoute: () => PatientIdRoute,
+} as any)
 const PatientIdScanRoute = PatientIdScanRouteImport.update({
   id: '/scan',
   path: '/scan',
@@ -103,33 +127,41 @@ const PatientIdSpo2Route = PatientIdSpo2RouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/awareness': typeof AwarenessRoute
   '/crt': typeof CrtRoute
   '/fet': typeof FetRoute
   '/fusion': typeof FusionRoute
   '/referral': typeof ReferralRoute
   '/register': typeof RegisterRoute
   '/scan': typeof ScanRoute
+  '/schemes': typeof SchemesRoute
   '/spo2': typeof Spo2Route
+  '/staff': typeof StaffRoute
   '/emergency/$id': typeof EmergencyIdRoute
   '/patient/$id': typeof PatientIdRouteWithChildren
   '/patient/$id/cough': typeof PatientIdCoughRoute
   '/patient/$id/gesture': typeof PatientIdGestureRoute
+  '/patient/$id/intake': typeof PatientIdIntakeRoute
   '/patient/$id/scan': typeof PatientIdScanRoute
   '/patient/$id/spo2': typeof PatientIdSpo2Route
   '/patient/$id/': typeof PatientIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/awareness': typeof AwarenessRoute
   '/crt': typeof CrtRoute
   '/fet': typeof FetRoute
   '/fusion': typeof FusionRoute
   '/referral': typeof ReferralRoute
   '/register': typeof RegisterRoute
   '/scan': typeof ScanRoute
+  '/schemes': typeof SchemesRoute
   '/spo2': typeof Spo2Route
+  '/staff': typeof StaffRoute
   '/emergency/$id': typeof EmergencyIdRoute
   '/patient/$id/cough': typeof PatientIdCoughRoute
   '/patient/$id/gesture': typeof PatientIdGestureRoute
+  '/patient/$id/intake': typeof PatientIdIntakeRoute
   '/patient/$id/scan': typeof PatientIdScanRoute
   '/patient/$id/spo2': typeof PatientIdSpo2Route
   '/patient/$id': typeof PatientIdIndexRoute
@@ -137,17 +169,21 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/awareness': typeof AwarenessRoute
   '/crt': typeof CrtRoute
   '/fet': typeof FetRoute
   '/fusion': typeof FusionRoute
   '/referral': typeof ReferralRoute
   '/register': typeof RegisterRoute
   '/scan': typeof ScanRoute
+  '/schemes': typeof SchemesRoute
   '/spo2': typeof Spo2Route
+  '/staff': typeof StaffRoute
   '/emergency/$id': typeof EmergencyIdRoute
   '/patient/$id': typeof PatientIdRouteWithChildren
   '/patient/$id/cough': typeof PatientIdCoughRoute
   '/patient/$id/gesture': typeof PatientIdGestureRoute
+  '/patient/$id/intake': typeof PatientIdIntakeRoute
   '/patient/$id/scan': typeof PatientIdScanRoute
   '/patient/$id/spo2': typeof PatientIdSpo2Route
   '/patient/$id/': typeof PatientIdIndexRoute
@@ -156,50 +192,62 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/awareness'
     | '/crt'
     | '/fet'
     | '/fusion'
     | '/referral'
     | '/register'
     | '/scan'
+    | '/schemes'
     | '/spo2'
+    | '/staff'
     | '/emergency/$id'
     | '/patient/$id'
     | '/patient/$id/cough'
     | '/patient/$id/gesture'
+    | '/patient/$id/intake'
     | '/patient/$id/scan'
     | '/patient/$id/spo2'
     | '/patient/$id/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/awareness'
     | '/crt'
     | '/fet'
     | '/fusion'
     | '/referral'
     | '/register'
     | '/scan'
+    | '/schemes'
     | '/spo2'
+    | '/staff'
     | '/emergency/$id'
     | '/patient/$id/cough'
     | '/patient/$id/gesture'
+    | '/patient/$id/intake'
     | '/patient/$id/scan'
     | '/patient/$id/spo2'
     | '/patient/$id'
   id:
     | '__root__'
     | '/'
+    | '/awareness'
     | '/crt'
     | '/fet'
     | '/fusion'
     | '/referral'
     | '/register'
     | '/scan'
+    | '/schemes'
     | '/spo2'
+    | '/staff'
     | '/emergency/$id'
     | '/patient/$id'
     | '/patient/$id/cough'
     | '/patient/$id/gesture'
+    | '/patient/$id/intake'
     | '/patient/$id/scan'
     | '/patient/$id/spo2'
     | '/patient/$id/'
@@ -207,13 +255,16 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AwarenessRoute: typeof AwarenessRoute
   CrtRoute: typeof CrtRoute
   FetRoute: typeof FetRoute
   FusionRoute: typeof FusionRoute
   ReferralRoute: typeof ReferralRoute
   RegisterRoute: typeof RegisterRoute
   ScanRoute: typeof ScanRoute
+  SchemesRoute: typeof SchemesRoute
   Spo2Route: typeof Spo2Route
+  StaffRoute: typeof StaffRoute
   EmergencyIdRoute: typeof EmergencyIdRoute
   PatientIdRoute: typeof PatientIdRouteWithChildren
 }
@@ -225,6 +276,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/awareness': {
+      id: '/awareness'
+      path: '/awareness'
+      fullPath: '/awareness'
+      preLoaderRoute: typeof AwarenessRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/crt': {
@@ -269,11 +327,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ScanRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/schemes': {
+      id: '/schemes'
+      path: '/schemes'
+      fullPath: '/schemes'
+      preLoaderRoute: typeof SchemesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/spo2': {
       id: '/spo2'
       path: '/spo2'
       fullPath: '/spo2'
       preLoaderRoute: typeof Spo2RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/staff': {
+      id: '/staff'
+      path: '/staff'
+      fullPath: '/staff'
+      preLoaderRoute: typeof StaffRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/emergency/$id': {
@@ -311,6 +383,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PatientIdGestureRouteImport
       parentRoute: typeof PatientIdRoute
     }
+    '/patient/$id/intake': {
+      id: '/patient/$id/intake'
+      path: '/intake'
+      fullPath: '/patient/$id/intake'
+      preLoaderRoute: typeof PatientIdIntakeRouteImport
+      parentRoute: typeof PatientIdRoute
+    }
     '/patient/$id/scan': {
       id: '/patient/$id/scan'
       path: '/scan'
@@ -331,6 +410,7 @@ declare module '@tanstack/react-router' {
 interface PatientIdRouteChildren {
   PatientIdCoughRoute: typeof PatientIdCoughRoute
   PatientIdGestureRoute: typeof PatientIdGestureRoute
+  PatientIdIntakeRoute: typeof PatientIdIntakeRoute
   PatientIdScanRoute: typeof PatientIdScanRoute
   PatientIdSpo2Route: typeof PatientIdSpo2Route
   PatientIdIndexRoute: typeof PatientIdIndexRoute
@@ -339,6 +419,7 @@ interface PatientIdRouteChildren {
 const PatientIdRouteChildren: PatientIdRouteChildren = {
   PatientIdCoughRoute: PatientIdCoughRoute,
   PatientIdGestureRoute: PatientIdGestureRoute,
+  PatientIdIntakeRoute: PatientIdIntakeRoute,
   PatientIdScanRoute: PatientIdScanRoute,
   PatientIdSpo2Route: PatientIdSpo2Route,
   PatientIdIndexRoute: PatientIdIndexRoute,
@@ -350,13 +431,16 @@ const PatientIdRouteWithChildren = PatientIdRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AwarenessRoute: AwarenessRoute,
   CrtRoute: CrtRoute,
   FetRoute: FetRoute,
   FusionRoute: FusionRoute,
   ReferralRoute: ReferralRoute,
   RegisterRoute: RegisterRoute,
   ScanRoute: ScanRoute,
+  SchemesRoute: SchemesRoute,
   Spo2Route: Spo2Route,
+  StaffRoute: StaffRoute,
   EmergencyIdRoute: EmergencyIdRoute,
   PatientIdRoute: PatientIdRouteWithChildren,
 }

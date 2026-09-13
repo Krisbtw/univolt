@@ -3,11 +3,13 @@ import { loadOrSeed, makeId, nextCaseId, newPatientInput, saveDb } from "./datab
 import type {
   BloodGroup,
   CommunicationProfile,
+  ConsultStatus,
   CoughResult,
   Patient,
   PpgResult,
   Sex,
   Spo2Quality,
+  TeleConsultRequest,
   UnivoltDb,
 } from "./types";
 
@@ -20,6 +22,31 @@ type UnivoltState = {
   addCoughScreening: (patientId: string, result: CoughResult) => void;
   /** Add a manual pulse-oximeter SpO₂ reading for a patient. */
   addManualSpo2: (patientId: string, spo2: number) => void;
+  /** Add manual clinic equipment readings (BP, Temperature, SpO₂). */
+  addManualVitals: (
+    patientId: string,
+    input: {
+      bpSystolic?: number | null;
+      bpDiastolic?: number | null;
+      temperatureC?: number | null;
+      spo2?: number | null;
+    },
+  ) => void;
+  /** Request a store-and-forward tele-consultation packet for a patient. */
+  requestTeleConsult: (
+    patientId: string,
+    input: {
+      triageLevel: TeleConsultRequest["triageLevel"];
+      vitals: TeleConsultRequest["vitals"];
+      symptoms?: Record<string, boolean | number>;
+      reasons: string[];
+      notes?: string;
+    },
+  ) => TeleConsultRequest;
+  /** Update the status or clinician notes of a tele-consult request. */
+  updateConsultStatus: (consultId: string, status: ConsultStatus, note?: string) => void;
+  /** Import a complete clinic backup JSON, replacing local database state. */
+  importDb: (imported: UnivoltDb) => { success: boolean; count: number };
   /** Attach a camera SpO₂ result to the patient's latest face scan. */
   updateLatestVitalsSpo2: (patientId: string, spo2: number | null, quality: Spo2Quality) => void;
   /** Update optional emergency card medical fields for a patient. */
@@ -48,6 +75,7 @@ export const useUnivolt = create<UnivoltState>((set, get) => ({
     patients: [],
     scans: [],
     coughs: [],
+    consults: [],
     meta: { seeded: false, version: 1 },
   },
   init: () => {
@@ -130,6 +158,86 @@ export const useUnivolt = create<UnivoltState>((set, get) => ({
     const next = { ...db, scans: [...db.scans, row] };
     saveDb(next);
     set({ db: next });
+  },
+  addManualVitals: (patientId, input) => {
+    const at = Date.now();
+    const row = {
+      id: makeId("m"),
+      patientId,
+      capturedAt: at,
+      heartRate: 0,
+      hrvRmssd: 0,
+      signalQuality: 0,
+      respiratoryRate: 0,
+      spo2Estimate: input.spo2 != null ? Math.round(input.spo2) : null,
+      spo2Quality: input.spo2 != null ? ("manual" as const) : undefined,
+      bpSystolic: input.bpSystolic != null ? Math.round(input.bpSystolic) : null,
+      bpDiastolic: input.bpDiastolic != null ? Math.round(input.bpDiastolic) : null,
+      temperatureC: input.temperatureC != null ? Number(input.temperatureC.toFixed(1)) : null,
+      peakCount: 0,
+      durationSec: 0,
+      simulated: false,
+      syncStatus: "local" as const,
+      source: "manual" as const,
+    };
+    const db = touchVisit(get().db, patientId, at);
+    const next = { ...db, scans: [...db.scans, row] };
+    saveDb(next);
+    set({ db: next });
+  },
+  requestTeleConsult: (patientId, input) => {
+    const at = Date.now();
+    const req: TeleConsultRequest = {
+      id: makeId("tc"),
+      patientId,
+      createdAt: at,
+      updatedAt: at,
+      triageLevel: input.triageLevel,
+      vitals: input.vitals,
+      symptoms: input.symptoms,
+      reasons: input.reasons,
+      status: "requested",
+      notes: input.notes ?? "",
+    };
+    const db = touchVisit(get().db, patientId, at);
+    const next = { ...db, consults: [req, ...(db.consults ?? [])] };
+    saveDb(next);
+    set({ db: next });
+    return req;
+  },
+  updateConsultStatus: (consultId, status, note) => {
+    const db = get().db;
+    const now = Date.now();
+    const next = {
+      ...db,
+      consults: (db.consults ?? []).map((c) =>
+        c.id === consultId
+          ? {
+              ...c,
+              status,
+              notes: note !== undefined ? note : c.notes,
+              updatedAt: now,
+            }
+          : c,
+      ),
+    };
+    saveDb(next);
+    set({ db: next });
+  },
+  importDb: (imported) => {
+    if (!imported || !Array.isArray(imported.patients) || !Array.isArray(imported.scans)) {
+      return { success: false, count: 0 };
+    }
+    const cleanDb: UnivoltDb = {
+      patients: imported.patients,
+      scans: imported.scans,
+      coughs: Array.isArray(imported.coughs) ? imported.coughs : [],
+      consults: Array.isArray(imported.consults) ? imported.consults : [],
+      meta: { seeded: true, version: 1 },
+    };
+    saveDb(cleanDb);
+    set({ db: cleanDb });
+    return { success: true, count: cleanDb.patients.length };
   },
   updateLatestVitalsSpo2: (patientId, spo2, quality) => {
     const db = get().db;
@@ -216,4 +324,34 @@ export function latestScan(db: UnivoltDb, patientId: string) {
 export function latestCough(db: UnivoltDb, patientId: string) {
   const coughs = selectCoughs(db, patientId);
   return coughs[coughs.length - 1] ?? null;
+}
+
+export function selectPatientConsults(db: UnivoltDb, patientId: string): TeleConsultRequest[] {
+  return (db.consults ?? [])
+    .filter((c) => c.patientId === patientId)
+    .sort((a, b) => b.createdAt - a.createdAt);
+}
+
+export function selectActiveConsults(db: UnivoltDb): TeleConsultRequest[] {
+  const priorityRank: Record<string, number> = {
+    urgent: 0,
+    phc_today: 1,
+    self_care: 2,
+    insufficient_data: 3,
+  };
+  const statusRank: Record<string, number> = {
+    requested: 0,
+    sent: 1,
+    completed: 2,
+  };
+  return [...(db.consults ?? [])].sort((a, b) => {
+    // Urgent-first
+    const pDiff = (priorityRank[a.triageLevel] ?? 2) - (priorityRank[b.triageLevel] ?? 2);
+    if (pDiff !== 0) return pDiff;
+    // Requested before sent before completed
+    const sDiff = (statusRank[a.status] ?? 0) - (statusRank[b.status] ?? 0);
+    if (sDiff !== 0) return sDiff;
+    // Newest first
+    return b.createdAt - a.createdAt;
+  });
 }

@@ -17,7 +17,7 @@ if (typeof window !== "undefined") {
   });
 }
 
-const APP_NAME = "Univolt";
+const APP_NAME = "UniCare";
 
 export const Route = createRootRoute({
   head: () => ({

@@ -304,12 +304,6 @@ Contributions to Univolt are warmly welcomed! Whether you are a biomedical engin
 
 ---
 
-## 📜 License
-
-This project is licensed under the **MIT License**.
-
----
-
 <p align="center">
   Built with ❤️ for community health workers and frontline healthcare champions worldwide.
 </p>
